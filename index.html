@@ -1,0 +1,3219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>R&amp;M Repair Monitoring Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#12151b;
+    --bg-2:#171b23;
+    --panel:#1c212b;
+    --panel-2:#212734;
+    --line:#2a3140;
+    --line-soft:#232a37;
+    --text:#e2e6ee;
+    --text-dim:#98a1b3;
+    --text-mute:#5e6779;
+    --teal:#49b39a;
+    --amber:#e0a53c;
+    --red:#dd5b52;
+    --blue:#5b8fd6;
+    --violet:#9088d4;
+    --radius:3px;
+    color-scheme: dark;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1100px 500px at 85% -10%, #1a2130 0%, transparent 55%),
+      var(--bg);
+    color:var(--text-dim);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    padding:28px 20px 90px;
+  }
+  .wrap{max-width:1400px;margin:0 auto;}
+  ::selection{background:var(--blue);color:#fff;}
+
+  /* ---------- Header ---------- */
+  .masthead{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:22px;}
+  .eyebrow{font-family:'Space Grotesk',sans-serif;letter-spacing:.22em;font-size:11px;color:var(--blue);text-transform:uppercase;margin:0 0 6px;}
+  .masthead h1{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:28px;color:#f3f5f9;margin:0;letter-spacing:-.01em;}
+  .masthead .sub{font-size:13px;color:var(--text-mute);margin-top:5px;}
+  .clock{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--text-mute);text-align:right;line-height:1.5;}
+  .clock b{color:var(--text);font-size:15px;}
+
+  /* ---------- Summary cards ---------- */
+  .stat-row{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:24px;}
+  @media (max-width:1100px){.stat-row{grid-template-columns:repeat(3,1fr);}}
+  @media (max-width:640px){.stat-row{grid-template-columns:repeat(2,1fr);}}
+  .stat-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;position:relative;overflow:hidden;}
+  .stat-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--stat-color,var(--blue));}
+  .stat-num{font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;color:var(--text);}
+  .stat-label{font-family:'Space Grotesk',sans-serif;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-mute);margin-top:4px;}
+
+  /* ---------- Toolbar ---------- */
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px;}
+  .toolbar input[type="text"], .toolbar select{
+    background:var(--panel);border:1px solid var(--line);color:var(--text);
+    font-family:'Inter',sans-serif;font-size:13px;padding:9px 11px;border-radius:var(--radius);
+  }
+  .toolbar input[type="text"]{width:230px;}
+  .toolbar select{color-scheme:dark;}
+  .spacer{flex:1;}
+  .btn{
+    font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:12.5px;letter-spacing:.03em;
+    padding:9px 16px;border-radius:var(--radius);border:1px solid var(--line);cursor:pointer;
+    background:var(--panel-2);color:var(--text);
+  }
+  .btn:hover{background:#28303f;}
+  .btn-primary{background:var(--blue);border-color:var(--blue);color:#fff;}
+  .btn-primary:hover{background:#4c7fc2;}
+  .btn-ghost{background:transparent;color:var(--text-dim);}
+  .btn-ghost:hover{color:var(--text);background:var(--panel);}
+  .btn-sm{padding:6px 11px;font-size:11.5px;}
+
+  /* ---------- Table ---------- */
+  .app-body{display:flex;align-items:flex-start;gap:22px;}
+  .module-nav{display:flex;flex-direction:column;gap:4px;flex:0 0 210px;border-right:1px solid var(--line);padding-right:14px;}
+  .module-nav-btn{
+    background:transparent;border:1px solid transparent;color:var(--text-mute);text-align:left;
+    font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:12.5px;letter-spacing:.04em;
+    padding:12px 14px;border-radius:var(--radius);cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;
+  }
+  .module-nav-btn:hover{color:var(--text-dim);background:var(--panel);}
+  .module-nav-btn.active{background:var(--panel-2);color:#f3f5f9;box-shadow:inset 2px 0 0 var(--blue);}
+  .module-nav-btn .nav-badge{font-family:'IBM Plex Mono',monospace;font-size:10.5px;background:var(--line);color:var(--text-dim);padding:1px 7px;border-radius:20px;}
+  .module-nav-btn.has-pending .nav-badge{background:var(--amber);color:#2a1f00;}
+  .module-content{flex:1 1 auto;min-width:0;}
+  .module{display:none;}
+  .module.active{display:block;}
+  @media (max-width:820px){
+    .app-body{flex-direction:column;}
+    .module-nav{flex-direction:row;flex:none;width:100%;border-right:none;border-bottom:1px solid var(--line);padding-right:0;padding-bottom:10px;flex-wrap:wrap;}
+    .module-nav-btn.active{box-shadow:inset 0 -2px 0 var(--blue);}
+  }
+
+  .ack-list{display:flex;flex-direction:column;gap:10px;}
+  .ack-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;}
+  .ack-main{display:flex;flex-direction:column;gap:5px;min-width:220px;}
+  .ack-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .ack-wo{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text);font-weight:600;}
+  .ack-plate{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-dim);}
+  .ack-meta{font-size:12px;color:var(--text-mute);}
+  .ack-status{font-size:12.5px;color:var(--text-dim);max-width:460px;}
+  .ack-actions{display:flex;gap:8px;flex-shrink:0;}
+  .empty-ack{padding:50px 20px;text-align:center;color:var(--text-mute);font-size:13.5px;background:var(--panel);border:1px dashed var(--line);border-radius:var(--radius);}
+
+  .table-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);}
+  table{border-collapse:collapse;width:100%;min-width:2000px;}
+  thead th{
+    position:sticky;top:0;background:var(--panel-2);z-index:2;
+    font-family:'Space Grotesk',sans-serif;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--text-mute);text-align:left;padding:11px 12px;border-bottom:1px solid var(--line);white-space:nowrap;
+  }
+  thead th.sortable{cursor:pointer;user-select:none;}
+  thead th.sortable:hover{color:var(--text-dim);}
+  thead th .arrow{margin-left:3px;opacity:.6;}
+  tbody td{padding:10px 12px;border-bottom:1px solid var(--line-soft);font-size:12.5px;color:var(--text-dim);white-space:nowrap;}
+  tbody tr{cursor:pointer;transition:background .12s ease;}
+  tbody tr:hover{background:#20263230;}
+  tbody tr:last-child td{border-bottom:none;}
+  td.strong{color:var(--text);font-weight:500;}
+  td.mono{font-family:'IBM Plex Mono',monospace;}
+
+  .pill{font-family:'Space Grotesk',sans-serif;font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:20px;color:#fff;white-space:nowrap;display:inline-block;}
+  .pill.ongoing{background:var(--amber);color:#2a1f00;}
+  .pill.completed{background:var(--teal);}
+  .pill.onhold{background:var(--text-mute);}
+  .pill.cancelled{background:var(--red);}
+  .pill.totalloss{background:#7a1f1f;}
+  .pill.impounded{background:var(--red);}
+  .pill.forack{background:var(--amber);color:#2a1f00;}
+
+  .agebar-wrap{display:flex;align-items:center;gap:8px;}
+  .agebar{width:60px;height:6px;border-radius:4px;background:var(--line);overflow:hidden;flex:0 0 auto;}
+  .agebar-fill{height:100%;border-radius:4px;}
+  .age-mapping-tag{font-family:'Space Grotesk',sans-serif;font-size:10px;letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:3px;color:#fff;white-space:nowrap;}
+
+  .empty-row td{padding:40px 12px;text-align:center;color:var(--text-mute);font-size:13px;}
+
+  /* ---------- WFM Dashboard (kanban) ---------- */
+  .wd-board{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-items:start;}
+  @media (max-width:900px){.wd-board{grid-template-columns:1fr;}}
+  .wd-column{background:var(--bg-2);border:1px solid var(--line);border-radius:var(--radius);display:flex;flex-direction:column;max-height:calc(100vh - 340px);min-height:220px;}
+  .wd-column-head{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);flex-shrink:0;}
+  .wd-col-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .wd-col-title{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:12.5px;letter-spacing:.04em;color:var(--text);flex:1;}
+  .wd-col-body{overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;}
+  .wd-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:11px 12px;cursor:pointer;transition:background .12s ease,border-color .12s ease;}
+  .wd-card:hover{background:var(--panel-2);border-color:#374057;}
+  .wd-card-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px;}
+  .wd-card-wo{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text);font-weight:600;}
+  .wd-card-age{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--text-mute);flex-shrink:0;}
+  .wd-card-desig{font-size:12.5px;color:var(--text-dim);margin-bottom:6px;}
+  .wd-card-meta{font-size:11px;color:var(--text-mute);margin-bottom:8px;}
+  .wd-card-actions{display:flex;gap:6px;}
+  .wd-card-actions .btn{padding:5px 10px;font-size:11px;}
+  .wd-empty-col{padding:30px 14px;text-align:center;color:var(--text-mute);font-size:12px;}
+
+  /* ---------- Drawer (add/edit) ---------- */
+  .overlay{position:fixed;inset:0;background:rgba(8,10,14,.6);display:none;align-items:stretch;justify-content:flex-end;z-index:50;}
+  .overlay.show{display:flex;}
+  .drawer{
+    width:min(560px,100%);background:var(--bg-2);border-left:1px solid var(--line);
+    height:100%;overflow-y:auto;padding:26px 26px 100px;position:relative;
+  }
+  .drawer-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;}
+  .drawer-head h2{font-family:'Space Grotesk',sans-serif;font-size:19px;color:#f3f5f9;margin:0;}
+  .drawer-head .sub{font-size:12px;color:var(--text-mute);margin-top:3px;}
+  .close-x{background:none;border:none;color:var(--text-mute);font-size:22px;cursor:pointer;line-height:1;padding:2px 6px;}
+  .close-x:hover{color:var(--text);}
+
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 14px;}
+  .form-grid .full{grid-column:1/-1;}
+  @media (max-width:520px){.form-grid{grid-template-columns:1fr;}}
+  .field{display:flex;flex-direction:column;gap:5px;}
+  .field label{font-family:'Space Grotesk',sans-serif;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-mute);}
+  .field input, .field select, .field textarea{
+    background:var(--panel);border:1px solid var(--line);color:var(--text);font-size:13.5px;
+    padding:9px 10px;border-radius:var(--radius);font-family:'Inter',sans-serif;outline:none;width:100%;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{border-color:var(--blue);}
+  .field textarea{resize:vertical;min-height:56px;}
+  .field .field-hint{font-size:11px;color:var(--text-mute);margin:4px 0 0;}
+  .field.readonly input{color:var(--text-dim);background:var(--bg);}
+  .field .calc-hint{font-size:10.5px;color:var(--text-mute);}
+
+  .section-label{font-family:'Space Grotesk',sans-serif;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--blue);margin:22px 0 12px;padding-top:16px;border-top:1px dashed var(--line);}
+  .section-label:first-of-type{margin-top:0;padding-top:0;border-top:none;}
+
+  .drawer-actions{position:sticky;bottom:0;background:var(--bg-2);display:flex;justify-content:space-between;gap:10px;padding:16px 0 4px;margin-top:26px;border-top:1px solid var(--line);}
+
+  /* ---------- Bulk upload panel ---------- */
+  .bulk-box{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px;display:none;}
+  .bulk-box.show{display:block;}
+  .bulk-box h3{font-family:'Space Grotesk',sans-serif;font-size:14px;color:var(--text);margin:0 0 4px;}
+  .bulk-box .hint{font-size:11.5px;color:var(--text-mute);margin-bottom:10px;}
+  .bulk-box textarea{
+    width:100%;min-height:110px;background:var(--bg);border:1px solid var(--line);color:var(--text);
+    font-family:'IBM Plex Mono',monospace;font-size:11.5px;padding:10px;border-radius:var(--radius);resize:vertical;
+  }
+  .bulk-box .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;}
+  .file-btn{
+    background:var(--panel-2);border:1px solid var(--line);color:var(--text-dim);font-size:12px;
+    font-family:'Space Grotesk',sans-serif;letter-spacing:.04em;padding:8px 12px;border-radius:var(--radius);cursor:pointer;
+  }
+  .file-btn:hover{background:#28303f;}
+  .file-btn input{display:none;}
+  .bulk-filename{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-mute);}
+
+  /* ---------- Roster (dropdown option manager) ---------- */
+  .roster-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
+  @media (max-width:900px){.roster-grid{grid-template-columns:1fr;}}
+  .roster-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;}
+  .roster-card h3{font-family:'Space Grotesk',sans-serif;font-size:13.5px;color:var(--text);margin:0;}
+  .roster-card .roster-hint{font-size:11.5px;color:var(--text-mute);margin:3px 0 12px;}
+  .chip-list{display:flex;flex-wrap:wrap;gap:7px;min-height:26px;}
+  .chip{background:var(--panel-2);border:1px solid var(--line);border-radius:20px;padding:4px 8px 4px 12px;
+    font-size:12px;color:var(--text-dim);display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+  .chip.builtin{color:var(--text-mute);}
+  .chip button{background:none;border:none;color:var(--text-mute);cursor:pointer;font-size:14px;line-height:1;padding:0 0 0 2px;}
+  .chip button:hover{color:var(--red);}
+  .roster-add-row{display:flex;gap:8px;margin-top:12px;}
+  .roster-add-row input{flex:1;}
+  .roster-empty{font-size:12px;color:var(--text-mute);}
+
+  /* ---------- Plate Number List summary ---------- */
+  .plate-summary-grid{display:grid;grid-template-columns:2fr 1fr;gap:18px;align-items:start;}
+  @media (max-width:900px){.plate-summary-grid{grid-template-columns:1fr;}}
+  .stat-row-auto{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:10px;}
+  .stat-row-auto .stat-card{padding:12px 14px;}
+  .stat-row-auto .stat-num{font-size:20px;}
+  .stat-block{margin-bottom:20px;}
+  .stat-block:last-child{margin-bottom:0;}
+  .stat-sub{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--text-mute);margin-top:3px;}
+  .summary-subhead{font-family:'Space Grotesk',sans-serif;font-size:12px;letter-spacing:.03em;color:var(--text-dim);margin:0 0 8px;}
+  .plate-summary-grid table th, .plate-summary-grid table td{white-space:nowrap;}
+  .plate-summary-grid table td.mono.strong{color:var(--text);}
+  .roster-bulk-toggle{margin-top:8px;background:none;border:none;color:var(--blue);font-family:'Space Grotesk',sans-serif;font-size:11.5px;font-weight:600;letter-spacing:.03em;cursor:pointer;padding:0;}
+  .roster-bulk-toggle:hover{text-decoration:underline;}
+  .roster-bulk-box{display:none;margin-top:10px;padding-top:12px;border-top:1px solid var(--line-soft);}
+  .roster-bulk-box.show{display:block;}
+  .roster-bulk-box textarea{
+    width:100%;min-height:80px;background:var(--bg);border:1px solid var(--line);color:var(--text);
+    font-family:'IBM Plex Mono',monospace;font-size:11.5px;padding:9px;border-radius:var(--radius);resize:vertical;
+  }
+  .roster-bulk-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;}
+  .file-btn-sm{
+    background:var(--panel-2);border:1px solid var(--line);color:var(--text-dim);font-size:11px;
+    font-family:'Space Grotesk',sans-serif;letter-spacing:.03em;padding:6px 10px;border-radius:var(--radius);cursor:pointer;
+  }
+  .file-btn-sm:hover{background:#28303f;}
+  .file-btn-sm input{display:none;}
+  .roster-bulk-summary{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--text-mute);}
+
+  /* ---------- Toast ---------- */
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--panel-2);
+    border:1px solid var(--line);color:var(--text);padding:11px 20px;border-radius:var(--radius);font-size:13px;
+    opacity:0;pointer-events:none;transition:all .25s ease;z-index:100;font-family:'Inter',sans-serif;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  code{background:var(--bg);padding:1px 5px;border-radius:2px;color:#dfe4ec;font-family:'IBM Plex Mono',monospace;}
+
+  /* ---------- Create Work Order module ---------- */
+  .create-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:24px 26px;max-width:760px;}
+  .wo-id-preview{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--text-mute);margin:-6px 0 20px;}
+  .mobile-row{display:flex;gap:0;}
+  .mobile-prefix{
+    font-family:'IBM Plex Mono',monospace;font-weight:600;display:flex;align-items:center;padding:0 10px;
+    border:1px solid var(--line);border-right:none;border-radius:var(--radius) 0 0 var(--radius);
+    background:var(--panel-2);color:var(--text-mute);font-size:13.5px;
+  }
+  .mobile-row input{border-radius:0 var(--radius) var(--radius) 0;}
+  .req-mark{color:var(--red);margin-left:2px;}
+  .location-block{
+    grid-column:1/-1;border:1px dashed var(--red);background:rgba(221,91,82,.08);
+    border-radius:var(--radius);padding:14px 14px 16px;display:none;flex-direction:column;gap:12px;
+  }
+  .location-block.show{display:flex;}
+  .location-block .lb-title{font-family:'Space Grotesk',sans-serif;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--red);}
+  .toggle-pair{display:flex;gap:16px;font-size:13px;color:var(--text-dim);}
+  .toggle-pair label{display:flex;align-items:center;gap:6px;font-family:'Inter',sans-serif;font-size:13px;color:var(--text);}
+  .latlong-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .chip-cat{font-family:'Space Grotesk',sans-serif;font-size:9px;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:10px;color:#fff;}
+  .chip-cat.routine{background:var(--blue);}
+  .chip-cat.rescue{background:var(--red);}
+
+  /* ---------- Users / Access ---------- */
+  .signed-in-bar{display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--text-mute);position:relative;}
+  .signed-in-bar select{background:var(--panel);border:1px solid var(--line);color:var(--text);font-family:'Inter',sans-serif;font-size:12.5px;padding:6px 9px;border-radius:var(--radius);max-width:190px;}
+  .signin-auth-box{position:absolute;top:100%;right:0;margin-top:8px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px;display:none;align-items:center;gap:8px;z-index:20;box-shadow:0 8px 24px rgba(0,0,0,.35);}
+  .signin-auth-box.show{display:flex;}
+  .signin-auth-box input{width:140px;background:var(--bg-2);border:1px solid var(--line);color:var(--text);font-family:'Inter',sans-serif;font-size:12.5px;padding:7px 9px;border-radius:var(--radius);}
+  .role-badge{font-family:'Space Grotesk',sans-serif;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:20px;color:#fff;white-space:nowrap;display:inline-block;}
+  .role-badge.admin{background:var(--red);}
+  .role-badge.dispatcher{background:var(--blue);}
+  .role-badge.viewer{background:var(--text-mute);}
+  .role-badge.wfm-fte{background:var(--violet);}
+  .role-badge.rm-fte{background:var(--amber);color:#2a1f00;}
+  .user-list{display:flex;flex-direction:column;gap:10px;}
+  .user-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 18px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;}
+  .user-main{display:flex;flex-direction:column;gap:4px;min-width:200px;}
+  .user-name{font-size:13.5px;color:var(--text);font-weight:600;display:flex;align-items:center;gap:8px;}
+  .user-email{font-size:12px;color:var(--text-mute);font-family:'IBM Plex Mono',monospace;}
+  .user-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .user-actions select{background:var(--panel-2);border:1px solid var(--line);color:var(--text);font-size:12px;padding:5px 8px;border-radius:var(--radius);}
+  .you-tag{font-family:'Space Grotesk',sans-serif;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--teal);border:1px solid var(--teal);padding:1px 7px;border-radius:20px;}
+  .add-user-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px;}
+  .add-user-card h3{font-family:'Space Grotesk',sans-serif;font-size:14px;color:var(--text);margin:0 0 12px;}
+  .add-user-grid{display:grid;grid-template-columns:1.2fr 1.2fr 1fr 1fr auto;gap:10px;align-items:end;}
+  @media (max-width:900px){.add-user-grid{grid-template-columns:1fr;}}
+  .add-user-grid .field label{font-family:'Space Grotesk',sans-serif;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-mute);margin-bottom:5px;display:block;}
+  .add-user-grid input, .add-user-grid select{width:100%;background:var(--bg-2);border:1px solid var(--line);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;padding:9px 11px;border-radius:var(--radius);}
+  .role-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--text-mute);margin:14px 0 18px;}
+  .role-legend b{color:var(--text-dim);}
+  .admin-gate{padding:60px 20px;text-align:center;color:var(--text-mute);font-size:13.5px;background:var(--panel);border:1px dashed var(--line);border-radius:var(--radius);}
+  .admin-gate b{color:var(--text-dim);display:block;font-family:'Space Grotesk',sans-serif;font-size:15px;margin-bottom:8px;}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+  .btn:disabled:hover{background:var(--panel-2);}
+
+  /* ---------- Login gate ---------- */
+  .login-gate{
+    position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;
+    background:
+      radial-gradient(1100px 500px at 85% -10%, #1a2130 0%, transparent 55%),
+      var(--bg);
+    padding:20px;
+  }
+  .login-gate.show{display:flex;}
+  .login-card{
+    width:100%;max-width:360px;background:var(--panel);border:1px solid var(--line);
+    border-radius:var(--radius);padding:30px 28px 26px;
+  }
+  .login-eyebrow{font-family:'Space Grotesk',sans-serif;letter-spacing:.22em;font-size:11px;color:var(--blue);text-transform:uppercase;margin:0 0 6px;}
+  .login-card h1{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:22px;color:#f3f5f9;margin:0 0 4px;letter-spacing:-.01em;}
+  .login-card .sub{font-size:12.5px;color:var(--text-mute);margin:0 0 22px;}
+  .login-card .field{margin-bottom:14px;}
+  .login-card .field label{font-family:'Space Grotesk',sans-serif;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-mute);display:block;margin-bottom:5px;}
+  .login-card input{
+    width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--text);
+    font-family:'Inter',sans-serif;font-size:13.5px;padding:10px 12px;border-radius:var(--radius);
+  }
+  .login-card input:focus{outline:none;border-color:var(--blue);}
+  .login-card .btn-primary{width:100%;padding:11px 16px;margin-top:6px;font-size:13px;}
+  .login-error{font-size:12px;color:var(--red);margin:-6px 0 14px;display:none;}
+  .login-error.show{display:block;}
+  #appWrap.locked{filter:blur(6px);pointer-events:none;user-select:none;}
+</style>
+</head>
+<body>
+
+<div class="login-gate" id="loginGate">
+  <div class="login-card">
+    <p class="login-eyebrow">Fleet Operations</p>
+    <h1>Sign in</h1>
+    <p class="sub">Enter your credentials to open the R&amp;M Repair Monitoring Tracker.</p>
+    <form id="loginForm">
+      <div class="field">
+        <label for="loginUsername">Username</label>
+        <input type="text" id="loginUsername" autocomplete="username" placeholder="Username">
+      </div>
+      <div class="field">
+        <label for="loginPassword">Password</label>
+        <input type="password" id="loginPassword" autocomplete="current-password" placeholder="Password">
+      </div>
+      <p class="login-error" id="loginError">Incorrect username or password.</p>
+      <button type="submit" class="btn btn-primary" id="loginSubmitBtn">Log in</button>
+    </form>
+  </div>
+</div>
+
+<div class="wrap locked" id="appWrap">
+  <div class="masthead">
+    <div>
+      <p class="eyebrow">Fleet Operations</p>
+      <h1>R&amp;M Repair Monitoring Tracker</h1>
+      <p class="sub">Breakdown-to-completion ageing tracker for the truck fleet.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+      <div class="signed-in-bar">
+        <span>Signed in as</span>
+        <select id="currentUserSelect"></select>
+        <span class="role-badge" id="currentUserRoleBadge" style="display:none;">—</span>
+        <button type="button" class="btn btn-ghost btn-sm" id="logoutBtn">Log out</button>
+        <div class="signin-auth-box" id="signinAuthBox">
+          <input type="password" id="signinAuthPassword" placeholder="Password" autocomplete="current-password">
+          <button type="button" class="btn btn-primary btn-sm" id="signinAuthConfirm">Sign in</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="signinAuthCancel">Cancel</button>
+        </div>
+      </div>
+      <div class="clock"><b id="clockTime">--:--</b><br><span id="clockDate">-</span></div>
+    </div>
+  </div>
+
+  <div class="app-body">
+  <div class="module-nav">
+    <button type="button" class="module-nav-btn active" data-module="create">Create Work Order</button>
+    <button type="button" class="module-nav-btn" data-module="dashboard">WFM Dashboard</button>
+    <button type="button" class="module-nav-btn" data-module="rmdashboard">R&amp;M Dashboard</button>
+    <button type="button" class="module-nav-btn" data-module="monitor">Repair Monitoring</button>
+    <button type="button" class="module-nav-btn" data-module="acknowledge">Work Order To Acknowledge <span class="nav-badge" id="ackNavBadge">0</span></button>
+    <button type="button" class="module-nav-btn" data-module="complete">Complete <span class="nav-badge" id="completeNavBadge">0</span></button>
+    <button type="button" class="module-nav-btn" data-module="roster">Roster</button>
+    <button type="button" class="module-nav-btn" data-module="plates">Plate Number List</button>
+    <button type="button" class="module-nav-btn" data-module="users">Users &amp; Access</button>
+  </div>
+
+  <div class="module-content">
+  <section class="module active" id="module-create">
+
+  <div class="create-card">
+    <div class="section-label" style="margin-top:0;padding-top:0;border-top:none;">New Work Order</div>
+    <p class="wo-id-preview" id="woIdPreview">WO-... (preview)</p>
+
+    <form id="woForm">
+      <div class="form-grid">
+        <div class="field full">
+          <label for="wo-requestType">Request Type<span class="req-mark">*</span></label>
+          <select id="wo-requestType">
+            <option value="">Select request type</option>
+          </select>
+        </div>
+        <div class="field readonly">
+          <label for="wo-requestor">Requestor<span class="req-mark">*</span></label>
+          <input type="text" id="wo-requestor" readonly placeholder="Sign in to set requestor">
+        </div>
+        <div class="field">
+          <label for="wo-plate">Plate #<span class="req-mark">*</span></label>
+          <input type="text" id="wo-plate" placeholder="e.g. ABC-1234" list="plateDatalist">
+          <span class="calc-hint">Letters auto-capitalized. No spaces.</span>
+        </div>
+        <div class="field">
+          <label for="wo-parking">Parking<span class="req-mark">*</span></label>
+          <select id="wo-parking">
+            <option value="">Select parking</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="wo-agency">Agency<span class="req-mark">*</span></label>
+          <select id="wo-agency">
+            <option value="">Select agency</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="wo-driverName">Driver Name<span class="req-mark">*</span></label>
+          <input type="text" id="wo-driverName" placeholder="JUAN DELA CRUZ" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="wo-mobile">Mobile Number<span class="req-mark">*</span></label>
+          <div class="mobile-row">
+            <span class="mobile-prefix">+63</span>
+            <input type="text" id="wo-mobile" placeholder="9171234567" inputmode="numeric" maxlength="10">
+          </div>
+          <span class="calc-hint">10 digits, no leading 0.</span>
+        </div>
+        <div class="field">
+          <label for="wo-odometer">Odometer (km)<span class="req-mark">*</span></label>
+          <input type="text" id="wo-odometer" placeholder="0" inputmode="numeric">
+        </div>
+        <div class="field full">
+          <label for="wo-reason">Reason<span class="req-mark">*</span></label>
+          <textarea id="wo-reason" placeholder="Describe the issue or activity..."></textarea>
+        </div>
+
+        <div class="location-block" id="wo-locationBlock">
+          <div class="lb-title">&#9888; Rescue Request — Location Required</div>
+          <div class="toggle-pair">
+            <label><input type="radio" name="wo-locType" value="address" checked> Address</label>
+            <label><input type="radio" name="wo-locType" value="latlong"> Lat / Long</label>
+          </div>
+          <div id="wo-locAddressField" class="field full" style="padding:0;">
+            <input type="text" id="wo-locationAddress" placeholder="Location of rescue...">
+          </div>
+          <div id="wo-locLatLongField" class="latlong-row" style="display:none;">
+            <input type="text" id="wo-latitude" placeholder="Latitude e.g. 14.5995" inputmode="decimal">
+            <input type="text" id="wo-longitude" placeholder="Longitude e.g. 120.9842" inputmode="decimal">
+          </div>
+        </div>
+      </div>
+
+      <div class="drawer-actions" style="position:static;background:transparent;border-top:1px solid var(--line);">
+        <button type="button" class="btn btn-ghost" id="woResetBtn">Clear form</button>
+        <div style="display:flex;gap:10px;margin-left:auto;">
+          <button type="submit" class="btn btn-primary">Create work order</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  </section>
+
+  <section class="module" id="module-dashboard">
+    <div class="masthead" style="margin-bottom:18px;">
+      <div>
+        <p class="eyebrow">Live Overview</p>
+        <h1 style="font-size:20px;">WFM Dashboard</h1>
+        <p class="sub">Every work order at a glance, plus fleet-wide health — waiting on acknowledgement, currently ongoing, or completed.</p>
+      </div>
+    </div>
+
+    <div class="stat-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:10px;">
+      <div class="stat-card" style="--stat-color:var(--amber);">
+        <div class="stat-num" id="dashStatAck">0</div>
+        <div class="stat-label">To Acknowledge</div>
+      </div>
+      <div class="stat-card" style="--stat-color:var(--blue);">
+        <div class="stat-num" id="dashStatOngoing">0</div>
+        <div class="stat-label">Ongoing</div>
+      </div>
+      <div class="stat-card" style="--stat-color:var(--teal);">
+        <div class="stat-num" id="dashStatComplete">0</div>
+        <div class="stat-label">Completed</div>
+      </div>
+    </div>
+
+    <div class="stat-row" style="grid-template-columns:repeat(5,1fr);margin-bottom:18px;">
+      <div class="stat-card" style="--stat-color:var(--violet);">
+        <div class="stat-num" id="dashStatTotalTrucks">0</div>
+        <div class="stat-label">Total Trucks</div>
+      </div>
+      <div class="stat-card" style="--stat-color:var(--teal);">
+        <div class="stat-num" id="dashStatTotalRunning">0</div>
+        <div class="stat-label">Total Running</div>
+      </div>
+      <div class="stat-card" style="--stat-color:var(--red);">
+        <div class="stat-num" id="dashStatImpounded">0</div>
+        <div class="stat-label">Impounded</div>
+      </div>
+      <div class="stat-card" style="--stat-color:var(--red);">
+        <div class="stat-num" id="dashStatTotalLoss">0</div>
+        <div class="stat-label">Total Loss</div>
+      </div>
+      <div class="stat-card" style="--stat-color:var(--teal);">
+        <div class="stat-num" id="dashStatDLRunning">0%</div>
+        <div class="stat-label">DL Running %</div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <input type="text" id="dashSearchBox" placeholder="Search WO#, plate, designation...">
+      <div class="spacer"></div>
+    </div>
+
+    <div class="wd-board">
+      <div class="wd-column">
+        <div class="wd-column-head">
+          <span class="wd-col-dot" style="background:var(--amber);"></span>
+          <span class="wd-col-title">To Acknowledge</span>
+          <span class="nav-badge" id="dashAckCount">0</span>
+        </div>
+        <div class="wd-col-body" id="dashAckColumn"></div>
+      </div>
+      <div class="wd-column">
+        <div class="wd-column-head">
+          <span class="wd-col-dot" style="background:var(--blue);"></span>
+          <span class="wd-col-title">Ongoing</span>
+          <span class="nav-badge" id="dashOngoingCount">0</span>
+        </div>
+        <div class="wd-col-body" id="dashOngoingColumn"></div>
+      </div>
+      <div class="wd-column">
+        <div class="wd-column-head">
+          <span class="wd-col-dot" style="background:var(--teal);"></span>
+          <span class="wd-col-title">Completed</span>
+          <span class="nav-badge" id="dashCompleteCount">0</span>
+        </div>
+        <div class="wd-col-body" id="dashCompleteColumn"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="module" id="module-rmdashboard">
+    <div class="masthead" style="margin-bottom:18px;">
+      <div>
+        <p class="eyebrow">Fleet Health</p>
+        <h1 style="font-size:20px;">R&amp;M Dashboard</h1>
+        <p class="sub">Deadline-running performance and open work order load across the fleet — live from the ledger and the Plate Number List registry.</p>
+      </div>
+    </div>
+
+    <div class="roster-card">
+      <div class="stat-row" style="grid-template-columns:repeat(1,1fr);max-width:220px;margin-bottom:20px;">
+        <div class="stat-card" style="--stat-color:var(--teal);">
+          <div class="stat-num" id="rmStatDLRunning">0%</div>
+          <div class="stat-label">Total DL Running %</div>
+          <div class="stat-sub" id="rmStatDLRunningSub">0 of 0 trucks running</div>
+        </div>
+      </div>
+
+      <div class="stat-block">
+        <p class="summary-subhead">DL Running % per Assigned Parking</p>
+        <div class="stat-row-auto" id="rmParkingRow"></div>
+      </div>
+
+      <div class="stat-block">
+        <p class="summary-subhead">Open WO per Designation</p>
+        <div class="stat-row-auto" id="rmDesigRow"></div>
+      </div>
+
+      <div class="stat-block">
+        <p class="summary-subhead">Overall Status Summary</p>
+        <div class="stat-row-auto" id="rmStatusRow"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="module" id="module-monitor">
+
+  <div class="stat-row">
+    <div class="stat-card" style="--stat-color:var(--blue);">
+      <div class="stat-num" id="statTotal">0</div>
+      <div class="stat-label">Total Units Logged</div>
+    </div>
+    <div class="stat-card" style="--stat-color:var(--amber);">
+      <div class="stat-num" id="statOngoing">0</div>
+      <div class="stat-label">Ongoing Breakdown</div>
+    </div>
+    <div class="stat-card" style="--stat-color:var(--teal);">
+      <div class="stat-num" id="statCompleted">0</div>
+      <div class="stat-label">Completed</div>
+    </div>
+    <div class="stat-card" style="--stat-color:var(--red);">
+      <div class="stat-num" id="statCritical">0</div>
+      <div class="stat-label">Critical (151+ Days)</div>
+    </div>
+    <div class="stat-card" style="--stat-color:var(--violet);">
+      <div class="stat-num" id="statAvgAge">0</div>
+      <div class="stat-label">Avg Ageing (Ongoing)</div>
+    </div>
+    <div class="stat-card" style="--stat-color:var(--blue);">
+      <div class="stat-num" id="statOnHold">0</div>
+      <div class="stat-label">On Hold / Cancelled</div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <input type="text" id="searchBox" placeholder="Search designation, plate, mechanic, WO...">
+    <select id="filterStatus">
+      <option value="">All statuses</option>
+    </select>
+    <select id="filterAgeMap">
+      <option value="">All age mapping</option>
+    </select>
+    <select id="filterTruckType">
+      <option value="">All truck types</option>
+    </select>
+    <button type="button" class="btn btn-ghost btn-sm" id="clearFiltersBtn">Clear filters</button>
+    <div class="spacer"></div>
+    <button type="button" class="btn" id="toggleBulkBtn">Bulk Upload</button>
+    <button type="button" class="btn btn-primary" id="addEntryBtn">+ Add Entry</button>
+  </div>
+
+  <div class="bulk-box" id="bulkBox">
+    <h3>Bulk Upload Entries</h3>
+    <p class="hint">One entry per line, fields separated by <code>|</code> pipe, in this exact order:<br>
+    <code>Work Order # | Plate # | Age Class | Designation | Assigned Parking Actual | Make | Year Model | Truck Type | Breakdown Date (YYYY-MM-DD) | Completed Date (YYYY-MM-DD or blank) | Breakdown Category-1 | Breakdown Category-2 | Breakdown Category-3 | Assigned Mechanic/s | Status Trail-1 | Status Trail-2 | Status Trail-3 | Latest Detailed Status | Status</code><br>
+    Breakdown Category-1: Technical, Involve Accident, Glasswork - Insurance, Impoundment. Breakdown Category-2: Minor, Major. Breakdown Category-3: Engine, Tires, Electrical, Body Repair, Battery, Glass, PMS, GPS.<br>
+    Leave a field blank between two pipes if not applicable. Ageing Days and Age Mapping are calculated automatically.</p>
+    <textarea id="bulkText" placeholder="WO-1042|ABC-1234|6-10 yrs|Unit 14|Depot A|Isuzu|2016|Dump Truck|2026-07-01|2026-07-09|Technical|Major|Engine|J. Reyes, M. Santos|Reported by driver|Dispatched mechanic|Parts sourced|Radiator replaced, test run OK|Completed"></textarea>
+    <div class="row">
+      <label class="file-btn">Choose file (.csv/.txt)<input type="file" id="bulkFile" accept=".csv,.txt"></label>
+      <span class="bulk-filename" id="bulkFilename"></span>
+      <div class="spacer"></div>
+      <span class="hint" id="bulkSummary"></span>
+      <button type="button" class="btn btn-primary btn-sm" id="bulkImportBtn">Import all</button>
+    </div>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th class="sortable" data-sort="workOrderNo">Work Order #</th>
+          <th class="sortable" data-sort="plateNo">Plate #</th>
+          <th class="sortable" data-sort="requestor">Requestor</th>
+          <th class="sortable" data-sort="driverName">Driver</th>
+          <th class="sortable" data-sort="odometer">Odometer</th>
+          <th class="sortable" data-sort="ageClass">Age Class</th>
+          <th class="sortable" data-sort="designation">Designation</th>
+          <th class="sortable" data-sort="agency">Agency</th>
+          <th class="sortable" data-sort="parkingActual">Assigned Parking Actual</th>
+          <th class="sortable" data-sort="make">Make</th>
+          <th class="sortable" data-sort="yearModel">Year Model</th>
+          <th class="sortable" data-sort="truckType">Truck Type</th>
+          <th class="sortable" data-sort="breakdownDate">Breakdown Date</th>
+          <th class="sortable" data-sort="completedDate">Completed Date</th>
+          <th class="sortable" data-sort="ageingDays">Ageing Days</th>
+          <th class="sortable" data-sort="ageMapping">Age Mapping</th>
+          <th class="sortable" data-sort="category1">Breakdown Category-1</th>
+          <th class="sortable" data-sort="category2">Breakdown Category-2</th>
+          <th class="sortable" data-sort="category3">Breakdown Category-3</th>
+          <th>Assigned Mechanic/s</th>
+          <th>Status Trail-1</th>
+          <th>Status Trail-2</th>
+          <th>Status Trail-3</th>
+          <th>Latest Detailed Status</th>
+          <th class="sortable" data-sort="status">Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <tr class="empty-row"><td colspan="26">No entries yet. Click "+ Add Entry" to log the first unit.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  </section>
+
+  <section class="module" id="module-acknowledge">
+    <div class="masthead" style="margin-bottom:18px;">
+      <div>
+        <p class="eyebrow">Pending Action</p>
+        <h1 style="font-size:20px;">Work Order To Acknowledge</h1>
+        <p class="sub">New breakdown reports waiting for a mechanic/dispatcher to acknowledge before work begins.</p>
+      </div>
+    </div>
+    <div class="ack-list" id="ackList">
+      <div class="empty-ack">No work orders pending acknowledgement.</div>
+    </div>
+  </section>
+
+  <section class="module" id="module-complete">
+    <div class="masthead" style="margin-bottom:18px;">
+      <div>
+        <p class="eyebrow">Closed Out</p>
+        <h1 style="font-size:20px;">Complete</h1>
+        <p class="sub">Work orders tagged as completed from Repair Monitoring land here.</p>
+      </div>
+    </div>
+    <div class="ack-list" id="completeList">
+      <div class="empty-ack">No completed work orders yet.</div>
+    </div>
+  </section>
+
+  <section class="module" id="module-roster">
+    <div class="masthead" style="margin-bottom:18px;">
+      <div>
+        <p class="eyebrow">Fleet Reference</p>
+        <h1 style="font-size:20px;">Roster</h1>
+        <p class="sub">Add or remove the dropdown options offered for Assigned Mechanics, Make, Assigned Parking Actual, Year Model, Truck Type and Status. Each category below supports adding one at a time or in bulk.</p>
+      </div>
+    </div>
+
+    <div class="roster-grid" id="rosterGrid"></div>
+  </section>
+
+  <section class="module" id="module-plates">
+    <div class="masthead" style="margin-bottom:18px;">
+      <div>
+        <p class="eyebrow">Fleet Reference</p>
+        <h1 style="font-size:20px;">Plate Number List</h1>
+        <p class="sub">The master fleet registry — plate number, age class, vehicle model, chassis #, engine #, gross weight, registered owner, provisional authority, designation, assigned parking, make, year model, and truck type. Add one at a time or bulk upload a list. Plate numbers suggest automatically when creating or editing a work order.</p>
+      </div>
+    </div>
+
+    <div class="roster-card" style="margin-bottom:16px;">
+      <h3>Fleet Summary</h3>
+      <p class="roster-hint">Live counts across the registered truck list below — updates automatically as trucks are added, edited, or removed.</p>
+
+      <div class="stat-row" style="grid-template-columns:repeat(1,1fr);max-width:200px;margin-bottom:20px;">
+        <div class="stat-card" style="--stat-color:var(--violet);">
+          <div class="stat-num" id="plateStatTotal">0</div>
+          <div class="stat-label">Total Trucks</div>
+        </div>
+      </div>
+
+      <div class="stat-block">
+        <p class="summary-subhead">Total per Make</p>
+        <div class="stat-row-auto" id="plateStatMakeRow"></div>
+      </div>
+
+      <div class="stat-block">
+        <p class="summary-subhead">Total per Truck Type</p>
+        <div class="stat-row-auto" id="plateStatTypeRow"></div>
+      </div>
+
+      <div class="stat-block">
+        <p class="summary-subhead">Total per Designation</p>
+        <div class="stat-row-auto" id="plateStatDesigRow"></div>
+      </div>
+    </div>
+
+    <div class="roster-card">
+      <h3>Registered Trucks</h3>
+      <p class="roster-hint" id="plateCountHint">0 trucks enrolled.</p>
+
+      <div class="toolbar" style="margin-bottom:12px;">
+        <input type="text" id="plateSearchBox" placeholder="Search plate, age class, vehicle model, chassis #, engine #, gross weight, owner, authority, designation, parking, make, year, truck type...">
+      </div>
+
+      <div class="table-scroll" style="margin-bottom:16px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Plate #</th>
+              <th>Age Class</th>
+              <th>Vehicle Model 1</th>
+              <th>Vehicle Model 2</th>
+              <th>Chassis #</th>
+              <th>Engine #</th>
+              <th>Gross Weight</th>
+              <th>Registered Owner</th>
+              <th>Provisional Authority</th>
+              <th>Designation</th>
+              <th>Assigned Parking Actual</th>
+              <th>Make</th>
+              <th>Year Model</th>
+              <th>Truck Type</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="plateTableBody">
+            <tr class="empty-row"><td colspan="15">No trucks enrolled yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="form-grid" style="margin-bottom:12px;">
+        <div class="field">
+          <label for="plateAddPlate">Plate #</label>
+          <input type="text" id="plateAddPlate" placeholder="e.g. ABC-1234" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="plateAddAgeClass">Age Class</label>
+          <select id="plateAddAgeClass">
+            <option value="">Select age class</option>
+            <option>New</option>
+            <option>Old</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="plateAddVehicleModel1">Vehicle Model 1</label>
+          <input type="text" id="plateAddVehicleModel1" placeholder="e.g. Forward" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="plateAddVehicleModel2">Vehicle Model 2</label>
+          <input type="text" id="plateAddVehicleModel2" placeholder="e.g. FRR90" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="plateAddChassisNo">Chassis #</label>
+          <input type="text" id="plateAddChassisNo" placeholder="e.g. JAANPR85CL7100123" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="plateAddEngineNo">Engine #</label>
+          <input type="text" id="plateAddEngineNo" placeholder="e.g. 4HK1-123456" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="plateAddGrossWeight">Gross Weight</label>
+          <input type="text" id="plateAddGrossWeight" placeholder="e.g. 8,000 kg" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="plateAddRegisteredOwner">Registered Owner</label>
+          <input type="text" id="plateAddRegisteredOwner" placeholder="e.g. Fleet Ops Corp." autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="plateAddProvisionalAuthority">Provisional Authority</label>
+          <input type="text" id="plateAddProvisionalAuthority" placeholder="e.g. PA-2026-0456" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="plateAddDesignation">Designation</label>
+          <select id="plateAddDesignation">
+            <option value="">Select designation</option>
+            <option>First Mile</option>
+            <option>Middle Mile</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="plateAddParking">Assigned Parking Actual</label>
+          <select id="plateAddParking"><option value="">Select parking</option></select>
+        </div>
+        <div class="field">
+          <label for="plateAddMake">Make</label>
+          <select id="plateAddMake"><option value="">Select make</option></select>
+        </div>
+        <div class="field">
+          <label for="plateAddYearModel">Year Model</label>
+          <select id="plateAddYearModel"><option value="">Select year model</option></select>
+        </div>
+        <div class="field">
+          <label for="plateAddTruckType">Truck Type</label>
+          <select id="plateAddTruckType"><option value="">Select truck type</option></select>
+        </div>
+      </div>
+      <button type="button" class="btn btn-primary btn-sm" id="plateAddBtn">+ Add Truck</button>
+
+      <button type="button" class="roster-bulk-toggle" id="plateBulkToggle">Bulk upload trucks &darr;</button>
+      <div class="roster-bulk-box" id="plateBulkBox">
+        <p class="roster-hint" style="margin:0 0 6px;">One truck per line, fields in this exact order:<br>
+        <code>Plate # | Age Class | Vehicle Model 1 | Vehicle Model 2 | Chassis # | Engine # | Gross Weight | Registered Owner | Provisional Authority | Designation | Assigned Parking Actual | Make | Year Model | Truck Type</code><br>
+        Age Class should be <code>New</code> or <code>Old</code>. Designation should be <code>First Mile</code> or <code>Middle Mile</code>. Typing/pasting directly: separate fields with a <code>|</code> pipe. Uploading the template below: fields go in their own spreadsheet column (comma-separated CSV) — either format is accepted. Plate letters are auto-capitalized and spaces removed. Leave a field blank if not applicable. Duplicate plate numbers are skipped automatically. Not sure of the format? Download the template below, fill it in, then upload it back.</p>
+        <textarea id="plateBulkText" placeholder="ABC-1234|New|Forward|FRR90|JAANPR85CL7100123|4HK1-123456|8,000 kg|Fleet Ops Corp.|PA-2026-0456|First Mile|SOC5 EP|Isuzu|2016|6W-14ft&#10;XYZ-5678|Old|Ranger|FTR|JAANPS85CL7100456|6HK1-654321|10,000 kg|Fleet Ops Corp.|PA-2025-0210|Middle Mile|SOC 8|Hino|2020|10W-32ft"></textarea>
+        <div class="roster-bulk-row">
+          <button type="button" class="file-btn-sm" id="plateTemplateBtn">&darr; Download Template</button>
+          <label class="file-btn-sm">Upload .csv/.txt<input type="file" accept=".csv,.txt" id="plateBulkFile"></label>
+          <span class="bulk-filename" id="plateBulkFilename"></span>
+          <div class="spacer"></div>
+          <span class="roster-bulk-summary" id="plateBulkSummary"></span>
+          <button type="button" class="btn btn-primary btn-sm" id="plateBulkImportBtn">Import all</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="module" id="module-users">
+    <div class="masthead" style="margin-bottom:18px;">
+      <div>
+        <p class="eyebrow">Access Control</p>
+        <h1 style="font-size:20px;">Users &amp; Access</h1>
+        <p class="sub">Manage who can sign in to this tracker and what they're allowed to do.</p>
+      </div>
+    </div>
+
+    <div id="usersGateNotice" class="admin-gate" style="display:none;">
+      <b>Admins only</b>
+      Sign in as an Admin using the selector at the top of the page to manage users.
+    </div>
+
+    <div id="usersManageArea">
+      <div class="role-legend">
+        <span><span class="role-badge admin">Admin</span> <b>Full access</b> — manage Users &amp; Roster, create/edit/delete work orders, bulk import.</span>
+        <span><span class="role-badge dispatcher">Dispatcher</span> <b>Limited</b> — Create Work Order, WFM Dashboard (view only), and view Plate Number List only.</span>
+        <span><span class="role-badge wfm-fte">WFM FTE</span> <b>Limited</b> — Create Work Order, WFM Dashboard (view only), and view Plate Number List only.</span>
+        <span><span class="role-badge rm-fte">R&amp;M FTE</span> <b>Operate</b> — create/edit/delete work orders, bulk import, acknowledge/complete. No access to WFM Dashboard.</span>
+        <span><span class="role-badge viewer">Viewer</span> <b>Read-only</b> — can view every module, no edits.</span>
+      </div>
+
+      <div class="add-user-card">
+        <h3>Add User</h3>
+        <div class="add-user-grid">
+          <div class="field">
+            <label for="u-name">Name</label>
+            <input type="text" id="u-name" placeholder="e.g. Maria Santos">
+          </div>
+          <div class="field">
+            <label for="u-email">Email / Username</label>
+            <input type="text" id="u-email" placeholder="e.g. m.santos@fleet.com">
+          </div>
+          <div class="field">
+            <label for="u-password">Password</label>
+            <input type="password" id="u-password" placeholder="Set a password" autocomplete="new-password">
+          </div>
+          <div class="field">
+            <label for="u-role">Role</label>
+            <select id="u-role">
+              <option value="admin">Admin</option>
+              <option value="dispatcher" selected>Dispatcher</option>
+              <option value="wfm-fte">WFM FTE</option>
+              <option value="rm-fte">R&amp;M FTE</option>
+              <option value="viewer">Viewer</option>
+            </select>
+          </div>
+          <button type="button" class="btn btn-primary" id="addUserBtn">+ Add User</button>
+        </div>
+        <button type="button" class="roster-bulk-toggle" id="toggleUserBulkBtn">Bulk add users &darr;</button>
+        <div class="roster-bulk-box" id="userBulkBox">
+          <p class="roster-hint" style="margin:0 0 6px;">One user per line: <code>Name | Email | Password | Role</code>.<br>
+          Role must be one of <code>Admin</code>, <code>Dispatcher</code>, <code>WFM FTE</code>, <code>R&amp;M FTE</code>, <code>Viewer</code> (defaults to Dispatcher if left blank).</p>
+          <textarea id="userBulkText" placeholder="Maria Santos|m.santos@fleet.com|Passw0rd1|Dispatcher&#10;Juan Dela Cruz|j.delacruz@fleet.com|Passw0rd2|R&amp;M FTE"></textarea>
+          <div class="roster-bulk-row">
+            <label class="file-btn-sm">Upload .csv/.txt<input type="file" accept=".csv,.txt" id="userBulkFile"></label>
+            <span class="bulk-filename" id="userBulkFilename"></span>
+            <div class="spacer"></div>
+            <span class="roster-bulk-summary" id="userBulkSummary"></span>
+            <button type="button" class="btn btn-primary btn-sm" id="userBulkImportBtn">Import all</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="user-list" id="userList"></div>
+    </div>
+  </section>
+
+  </div>
+  </div>
+</div>
+
+<!-- Drawer -->
+<div class="overlay" id="overlay">
+  <div class="drawer">
+    <div class="drawer-head">
+      <div>
+        <h2 id="drawerTitle">Add Entry</h2>
+        <p class="sub" id="drawerSub">Log a new unit into the downtime ledger.</p>
+      </div>
+      <button type="button" class="close-x" id="closeDrawerBtn">&times;</button>
+    </div>
+
+    <form id="entryForm">
+      <div class="section-label">Unit Identification</div>
+      <div class="form-grid">
+        <div class="field">
+          <label for="f-workOrderNo">Work Order #</label>
+          <input type="text" id="f-workOrderNo" placeholder="e.g. WO-1042">
+        </div>
+        <div class="field">
+          <label for="f-plateNo">Plate #</label>
+          <input type="text" id="f-plateNo" placeholder="e.g. ABC-1234" list="plateDatalist">
+        </div>
+        <div class="field">
+          <label for="f-requestor">Requestor</label>
+          <input type="text" id="f-requestor" placeholder="e.g. J. Reyes">
+        </div>
+        <div class="field">
+          <label for="f-driverName">Driver</label>
+          <input type="text" id="f-driverName" placeholder="e.g. JUAN DELA CRUZ">
+        </div>
+        <div class="field">
+          <label for="f-odometer">Odometer (km)</label>
+          <input type="text" id="f-odometer" placeholder="0" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label for="f-ageClass">Age Class</label>
+          <select id="f-ageClass">
+            <option value="">Select age class</option>
+            <option>New</option>
+            <option>Old</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-designation">Designation</label>
+          <select id="f-designation">
+            <option value="">Select designation</option>
+            <option>First Mile</option>
+            <option>Middle Mile</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-agency">Agency</label>
+          <select id="f-agency">
+            <option value="">Select agency</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-parkingActual">Assigned Parking Actual</label>
+          <select id="f-parkingActual">
+            <option value="">Select parking</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-make">Make</label>
+          <select id="f-make">
+            <option value="">Select make</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-yearModel">Year Model</label>
+          <select id="f-yearModel">
+            <option value="">Select year model</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-truckType">Truck Type</label>
+          <select id="f-truckType">
+            <option value="">Select truck type</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section-label">Downtime & Ageing</div>
+      <div class="form-grid">
+        <div class="field">
+          <label for="f-breakdownDate">Breakdown Date</label>
+          <input type="date" id="f-breakdownDate">
+        </div>
+        <div class="field">
+          <label for="f-completedDate">Completed Date</label>
+          <input type="date" id="f-completedDate">
+          <span class="calc-hint">Leave blank while still down.</span>
+        </div>
+        <div class="field readonly">
+          <label>Ageing Days (auto)</label>
+          <input type="text" id="f-ageingDaysDisplay" readonly>
+        </div>
+        <div class="field readonly">
+          <label>Age Mapping (auto)</label>
+          <input type="text" id="f-ageMappingDisplay" readonly>
+        </div>
+      </div>
+
+      <div class="section-label">Breakdown Details</div>
+      <div class="form-grid">
+        <div class="field">
+          <label for="f-category1">Breakdown Category-1</label>
+          <select id="f-category1">
+            <option value="">Select category</option>
+            <option>Technical</option>
+            <option>Involve Accident</option>
+            <option>Glasswork - Insurance</option>
+            <option>Impoundment</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-category2">Breakdown Category-2</label>
+          <select id="f-category2">
+            <option value="">Select category</option>
+            <option>Minor</option>
+            <option>Major</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-category3">Breakdown Category-3</label>
+          <select id="f-category3">
+            <option value="">Select category</option>
+            <option>Engine</option>
+            <option>Tires</option>
+            <option>Electrical</option>
+            <option>Body Repair</option>
+            <option>Battery</option>
+            <option>Glass</option>
+            <option>PMS</option>
+            <option>GPS</option>
+          </select>
+        </div>
+        <div class="field full">
+          <label for="f-mechanics">Assigned Mechanic/s</label>
+          <select id="f-mechanics" multiple size="4"></select>
+          <span class="calc-hint">Ctrl/Cmd-click (or tap each) to select more than one.</span>
+        </div>
+      </div>
+
+      <div class="section-label">Status Trail</div>
+      <div class="form-grid">
+        <div class="field">
+          <label for="f-trail1">Status Trail-1</label>
+          <input type="text" id="f-trail1" placeholder="Earliest update">
+        </div>
+        <div class="field">
+          <label for="f-trail2">Status Trail-2</label>
+          <input type="text" id="f-trail2" placeholder="Next update">
+        </div>
+        <div class="field">
+          <label for="f-trail3">Status Trail-3</label>
+          <input type="text" id="f-trail3" placeholder="Next update">
+        </div>
+        <div class="field">
+          <label for="f-status">Status</label>
+          <select id="f-status"></select>
+        </div>
+        <div class="field full readonly">
+          <label>Latest Detailed Status (auto)</label>
+          <input type="text" id="f-latestStatusDisplay" readonly placeholder="Blank until a Status Trail field is filled in">
+          <p class="field-hint">Automatically mirrors whichever Status Trail field was filled in most recently — Trail-3 if it has a value, otherwise Trail-2, otherwise Trail-1.</p>
+        </div>
+      </div>
+
+      <div class="drawer-actions">
+        <button type="button" class="btn btn-ghost" id="deleteEntryBtn" style="display:none;">Delete entry</button>
+        <div style="display:flex;gap:10px;margin-left:auto;">
+          <button type="button" class="btn btn-ghost" id="cancelDrawerBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="saveEntryBtn">Save entry</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<datalist id="plateDatalist"></datalist>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const storageOK = () => typeof window.storage !== 'undefined';
+
+  // ---------- Login gate ----------
+  const AUTH_ACCOUNTS = [
+    { username: 'MMOPEX', password: 'Admin123' },
+    { username: 'adrian', password: 'adrianpadugar' }
+  ];
+
+  async function getSessionAuthed(){
+    if(!storageOK()) return false;
+    try{ const r = await window.storage.get('fleet_session_authed', false); return !!r && r.value === '1'; }
+    catch(e){ return false; }
+  }
+  async function setSessionAuthed(v){
+    if(!storageOK()) return;
+    try{ await window.storage.set('fleet_session_authed', v ? '1' : '0', false); }
+    catch(e){}
+  }
+
+  function unlockApp(){
+    $('loginGate').classList.remove('show');
+    $('appWrap').classList.remove('locked');
+  }
+  function lockApp(){
+    $('appWrap').classList.add('locked');
+    $('loginGate').classList.add('show');
+    $('loginUsername').value = '';
+    $('loginPassword').value = '';
+    $('loginError').classList.remove('show');
+    setTimeout(()=>$('loginUsername').focus(), 0);
+  }
+
+  // Ensures there is an Admin user record for the given login account and
+  // returns it, creating one named after that login's username if it
+  // doesn't exist yet.
+  function ensureAdminUserRecord(account){
+    const acc = account || AUTH_ACCOUNTS[0];
+    let admin = users.find(x=>x.role==='admin' && x.name.toLowerCase()===acc.username.toLowerCase());
+    if(!admin){
+      admin = { id: uidUser(), name: acc.username, email:'', password: acc.password, role:'admin' };
+      users.push(admin);
+    }
+    return admin;
+  }
+
+  async function signInAsAdminIfNeeded(account){
+    if(currentUserId && users.some(u=>u.id===currentUserId)) return;
+    const admin = ensureAdminUserRecord(account);
+    await saveUsers();
+    currentUserId = admin.id;
+    await saveCurrentUserId();
+  }
+
+  $('loginForm').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const u = $('loginUsername').value.trim();
+    const p = $('loginPassword').value;
+    const account = AUTH_ACCOUNTS.find(a=>a.username===u && a.password===p);
+    if(account){
+      $('loginError').classList.remove('show');
+      await setSessionAuthed(true);
+      await signInAsAdminIfNeeded(account);
+      renderSignedInBar();
+      renderUserList();
+      applyAccessControl();
+      renderWorkDashboard();
+      renderAckList();
+      renderCompleteList();
+      unlockApp();
+    } else {
+      $('loginError').classList.add('show');
+      $('loginPassword').value = '';
+      $('loginPassword').focus();
+    }
+  });
+
+  $('logoutBtn').addEventListener('click', async ()=>{
+    await setSessionAuthed(false);
+    lockApp();
+  });
+
+  async function getJSON(key, fallback){
+    if(!storageOK()) return fallback;
+    try{ const r = await window.storage.get(key, true); return r ? JSON.parse(r.value) : fallback; }
+    catch(e){ return fallback; }
+  }
+  async function setJSON(key, value){
+    if(!storageOK()) return false;
+    try{ await window.storage.set(key, JSON.stringify(value), true); return true; }
+    catch(e){ console.error('storage set failed', e); return false; }
+  }
+
+  let entries = [];
+  let editingId = null;
+  let sortKey = 'breakdownDate';
+  let sortDir = 'desc';
+
+  // ---------- Users / Access ----------
+  let users = [];
+  let currentUserId = null;
+
+  function getCurrentUser(){ return users.find(u=>u.id===currentUserId) || null; }
+  function updateRequestorField(){
+    const el = $('wo-requestor');
+    if(!el) return;
+    const u = getCurrentUser();
+    el.value = u ? u.name : '';
+  }
+  function isAdmin(){ const u = getCurrentUser(); return !!u && u.role==='admin'; }
+  function canEdit(){ const u = getCurrentUser(); return !!u && (u.role==='admin' || u.role==='dispatcher' || u.role==='wfm-fte' || u.role==='rm-fte'); }
+  // Dispatcher & WFM FTE get view-only access on the WFM Dashboard board — no Acknowledge, Complete, or Reopen actions there.
+  function canManageDashboardActions(){ const u = getCurrentUser(); return !!u && (u.role==='admin' || u.role==='rm-fte'); }
+  const ROLE_LABELS = { admin:'Admin', dispatcher:'Dispatcher', 'wfm-fte':'WFM FTE', 'rm-fte':'R&M FTE', viewer:'Viewer' };
+  function roleLabel(role){ return ROLE_LABELS[role] || role; }
+
+  function uidUser(){ return 'U-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).slice(2,5).toUpperCase(); }
+
+  async function saveUsers(){ await setJSON('fleet_users', users); }
+
+  // current signed-in user is per-browser (not shared), like a lightweight local session
+  async function saveCurrentUserId(){
+    if(!storageOK()) return;
+    try{ await window.storage.set('fleet_current_user_id', currentUserId || '', false); }
+    catch(e){}
+  }
+  async function loadCurrentUserId(){
+    if(!storageOK()) return null;
+    try{ const r = await window.storage.get('fleet_current_user_id', false); return r ? r.value : null; }
+    catch(e){ return null; }
+  }
+
+  function renderSignedInBar(){
+    const sel = $('currentUserSelect');
+    sel.innerHTML = '<option value="">— Guest (no access) —</option>' +
+      users.map(u=>`<option value="${u.id}">${u.name} — ${roleLabel(u.role)}</option>`).join('');
+    sel.value = currentUserId || '';
+    const badge = $('currentUserRoleBadge');
+    const cu = getCurrentUser();
+    if(cu){ badge.textContent = roleLabel(cu.role); badge.className = 'role-badge ' + cu.role; badge.style.display=''; }
+    else { badge.style.display='none'; }
+    updateRequestorField();
+  }
+
+  // Roles limited to a reduced nav — they can only view/use these modules.
+  const NAV_RESTRICTED_ROLES = ['dispatcher', 'wfm-fte'];
+  const RESTRICTED_ALLOWED_MODULES = ['create', 'dashboard', 'plates'];
+  // R&M FTE must not see the WFM Dashboard at all (not even view-only).
+  const DASHBOARD_BLOCKED_ROLES = ['rm-fte'];
+
+  function applyAccessControl(){
+    const editable = canEdit();
+    const admin = isAdmin();
+
+    ['addEntryBtn','toggleBulkBtn','bulkImportBtn'].forEach(id=>{
+      const el = $(id);
+      if(el){ el.disabled = !editable; el.title = editable ? '' : 'Sign in as an Admin or Dispatcher to use this.'; }
+    });
+
+    document.querySelectorAll('#rosterGrid input, #rosterGrid button, #rosterGrid textarea').forEach(el=>{ el.disabled = !admin; });
+
+    ['plateAddPlate','plateAddAgeClass','plateAddVehicleModel1','plateAddVehicleModel2','plateAddChassisNo','plateAddEngineNo','plateAddGrossWeight','plateAddRegisteredOwner','plateAddProvisionalAuthority','plateAddDesignation','plateAddParking','plateAddMake','plateAddYearModel','plateAddTruckType','plateAddBtn','plateBulkToggle','plateBulkImportBtn'].forEach(id=>{
+      const el = $(id);
+      if(el){ el.disabled = !admin; el.title = admin ? '' : 'Sign in as an Admin to manage the plate list.'; }
+    });
+    if(typeof renderPlateList==='function') renderPlateList();
+
+    // bootstrap exception: if no users exist yet, anyone can open Users to create the first Admin
+    const usersOpen = admin || users.length===0;
+    $('usersGateNotice').style.display = usersOpen ? 'none' : '';
+    $('usersManageArea').style.display = usersOpen ? '' : 'none';
+
+    // Nav restriction: Dispatcher & WFM FTE only see Create Work Order + WFM Dashboard + Plate Number List.
+    // R&M FTE sees everything else but is blocked from the WFM Dashboard specifically.
+    const cu = getCurrentUser();
+    const restrictNav = !!(cu && NAV_RESTRICTED_ROLES.includes(cu.role));
+    const dashboardBlocked = !!(cu && DASHBOARD_BLOCKED_ROLES.includes(cu.role));
+    let activeHiddenModule = false;
+    document.querySelectorAll('.module-nav-btn').forEach(btn=>{
+      let allowed = !restrictNav || RESTRICTED_ALLOWED_MODULES.includes(btn.dataset.module);
+      if(btn.dataset.module==='dashboard' && dashboardBlocked) allowed = false;
+      btn.style.display = allowed ? '' : 'none';
+      if(!allowed && btn.classList.contains('active')) activeHiddenModule = true;
+    });
+    if(activeHiddenModule) switchModule(dashboardBlocked ? 'monitor' : 'create');
+  }
+
+  function renderUserList(){
+    const list = $('userList');
+    list.innerHTML = '';
+    if(users.length===0){
+      list.innerHTML = '<div class="empty-ack">No users yet. Add one above — the first Admin you add can then sign in and manage everyone else.</div>';
+      return;
+    }
+    users.forEach(u=>{
+      const card = document.createElement('div');
+      card.className = 'user-card';
+      card.innerHTML = `
+        <div class="user-main">
+          <div class="user-name">${u.name || '(unnamed)'} ${u.id===currentUserId ? '<span class="you-tag">You</span>' : ''}</div>
+          ${u.email ? `<div class="user-email">${u.email}</div>` : ''}
+        </div>
+        <div class="user-actions">
+          <span class="role-badge ${u.role}">${roleLabel(u.role)}</span>
+          <select data-role-for="${u.id}">
+            <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
+            <option value="dispatcher" ${u.role==='dispatcher'?'selected':''}>Dispatcher</option>
+            <option value="wfm-fte" ${u.role==='wfm-fte'?'selected':''}>WFM FTE</option>
+            <option value="rm-fte" ${u.role==='rm-fte'?'selected':''}>R&amp;M FTE</option>
+            <option value="viewer" ${u.role==='viewer'?'selected':''}>Viewer</option>
+          </select>
+          <button type="button" class="btn btn-ghost btn-sm" data-change-password="${u.id}">Change password</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-remove-user="${u.id}">Remove</button>
+        </div>
+      `;
+      list.appendChild(card);
+    });
+
+    list.querySelectorAll('[data-role-for]').forEach(sel=>{
+      sel.addEventListener('change', async ()=>{
+        const id = sel.dataset.roleFor;
+        const u = users.find(x=>x.id===id);
+        if(!u) return;
+        if(u.role==='admin' && sel.value!=='admin' && users.filter(x=>x.role==='admin').length<=1){
+          toast('At least one Admin must remain. Add another Admin before changing this one.');
+          sel.value = 'admin';
+          return;
+        }
+        u.role = sel.value;
+        await saveUsers();
+        renderUserList();
+        renderSignedInBar();
+        applyAccessControl();
+        toast(`Updated ${u.name || 'user'}'s role to ${roleLabel(u.role)}.`);
+      });
+    });
+
+    list.querySelectorAll('[data-remove-user]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const id = btn.dataset.removeUser;
+        const u = users.find(x=>x.id===id);
+        if(!u) return;
+        if(u.role==='admin' && users.filter(x=>x.role==='admin').length<=1){
+          toast('At least one Admin must remain. Add another Admin before removing this one.');
+          return;
+        }
+        if(!confirm(`Remove ${u.name || 'this user'}?`)) return;
+        users = users.filter(x=>x.id!==id);
+        if(currentUserId===id){ currentUserId = null; await saveCurrentUserId(); }
+        await saveUsers();
+        renderUserList();
+        renderSignedInBar();
+        applyAccessControl();
+        toast('User removed.');
+      });
+    });
+
+    list.querySelectorAll('[data-change-password]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const id = btn.dataset.changePassword;
+        const u = users.find(x=>x.id===id);
+        if(!u) return;
+        const pw = prompt(`Set a new password for ${u.name || 'this user'}:`);
+        if(pw === null) return;
+        if(!pw.trim()){ toast('Password cannot be blank.'); return; }
+        u.password = pw.trim();
+        await saveUsers();
+        toast(`Password updated for ${u.name || 'user'}.`);
+      });
+    });
+  }
+
+  $('addUserBtn').addEventListener('click', async ()=>{
+    const name = $('u-name').value.trim();
+    const email = $('u-email').value.trim();
+    const password = $('u-password').value;
+    const role = $('u-role').value;
+    if(!name){ toast('Name is required.'); return; }
+    if(!password){ toast('Password is required.'); return; }
+    users.push({ id: uidUser(), name, email, password, role });
+    await saveUsers();
+    $('u-name').value=''; $('u-email').value=''; $('u-password').value=''; $('u-role').value='dispatcher';
+    renderUserList();
+    renderSignedInBar();
+    toast(`Added ${name} as ${roleLabel(role)}.`);
+  });
+
+  // ---------- Bulk add users ----------
+  const ROLE_LOOKUP = {
+    'admin':'admin',
+    'dispatcher':'dispatcher',
+    'wfm-fte':'wfm-fte', 'wfm fte':'wfm-fte', 'wfm':'wfm-fte',
+    'rm-fte':'rm-fte', 'r&m fte':'rm-fte', 'r&m':'rm-fte', 'rm':'rm-fte'
+  };
+
+  $('toggleUserBulkBtn').addEventListener('click', ()=>{
+    $('userBulkBox').classList.toggle('show');
+  });
+
+  $('userBulkFile').addEventListener('change', ()=>{
+    const file = $('userBulkFile').files[0];
+    if(!file) return;
+    $('userBulkFilename').textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      const ta = $('userBulkText');
+      const existing = ta.value.trim();
+      const incoming = String(e.target.result||'').trim();
+      ta.value = existing ? existing + '\n' + incoming : incoming;
+    };
+    reader.onerror = ()=>toast('Could not read file.');
+    reader.readAsText(file);
+  });
+
+  $('userBulkImportBtn').addEventListener('click', async ()=>{
+    if(!isAdmin() && users.length>0){ toast('Sign in as an Admin to manage users.'); return; }
+    const raw = $('userBulkText').value.trim();
+    if(!raw){ toast('Nothing to import.'); return; }
+    const lines = raw.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+    let added = 0, skipped = 0;
+    lines.forEach(line=>{
+      const parts = line.split('|').map(p=>p.trim());
+      const name = parts[0];
+      const email = parts[1] || '';
+      const password = parts[2] || '';
+      const roleRaw = (parts[3] || 'dispatcher').toLowerCase();
+      if(!name || !password){ skipped++; return; }
+      const role = ROLE_LOOKUP[roleRaw];
+      if(!role){ skipped++; return; }
+      const exists = users.some(u=>u.name.toLowerCase()===name.toLowerCase() && (u.email||'').toLowerCase()===email.toLowerCase());
+      if(exists){ skipped++; return; }
+      users.push({ id: uidUser(), name, email, password, role });
+      added++;
+    });
+    await saveUsers();
+    renderUserList();
+    renderSignedInBar();
+    applyAccessControl();
+    $('userBulkText').value=''; $('userBulkFilename').textContent='';
+    $('userBulkSummary').textContent = `Added ${added}, skipped ${skipped} (of ${lines.length}).`;
+    toast(`Added ${added} user${added===1?'':'s'}${skipped?`, skipped ${skipped}`:''}.`);
+  });
+
+  // ---------- Sign-in password gate ----------
+  let pendingSignInId = null;
+
+  function showSignInAuth(){
+    $('signinAuthBox').classList.add('show');
+    $('signinAuthPassword').value = '';
+    setTimeout(()=>$('signinAuthPassword').focus(), 0);
+  }
+  function hideSignInAuth(){
+    $('signinAuthBox').classList.remove('show');
+    pendingSignInId = null;
+  }
+
+  $('currentUserSelect').addEventListener('change', async ()=>{
+    const value = $('currentUserSelect').value || null;
+    hideSignInAuth();
+
+    if(!value){
+      currentUserId = null;
+      await saveCurrentUserId();
+      renderSignedInBar();
+      renderUserList();
+      applyAccessControl();
+      renderWorkDashboard();
+      renderAckList();
+      renderCompleteList();
+      toast('Signed out.');
+      return;
+    }
+
+    const target = users.find(u=>u.id===value);
+    if(!target) return;
+
+    if(!target.password){
+      // legacy user record with no password set yet - allow direct switch
+      currentUserId = target.id;
+      await saveCurrentUserId();
+      renderSignedInBar();
+      renderUserList();
+      applyAccessControl();
+      renderWorkDashboard();
+      renderAckList();
+      renderCompleteList();
+      toast(`Signed in as ${target.name} (${roleLabel(target.role)}).`);
+      return;
+    }
+
+    pendingSignInId = target.id;
+    showSignInAuth();
+  });
+
+  $('signinAuthConfirm').addEventListener('click', async ()=>{
+    const target = users.find(u=>u.id===pendingSignInId);
+    if(!target){ hideSignInAuth(); renderSignedInBar(); return; }
+    const entered = $('signinAuthPassword').value;
+    if(entered === target.password){
+      currentUserId = target.id;
+      await saveCurrentUserId();
+      hideSignInAuth();
+      renderSignedInBar();
+      renderUserList();
+      applyAccessControl();
+      renderWorkDashboard();
+      renderAckList();
+      renderCompleteList();
+      toast(`Signed in as ${target.name} (${roleLabel(target.role)}).`);
+    } else {
+      toast('Incorrect password.');
+      $('signinAuthPassword').value = '';
+      $('signinAuthPassword').focus();
+    }
+  });
+  $('signinAuthPassword').addEventListener('keydown', (e)=>{
+    if(e.key==='Enter'){ e.preventDefault(); $('signinAuthConfirm').click(); }
+  });
+  $('signinAuthCancel').addEventListener('click', ()=>{
+    hideSignInAuth();
+    renderSignedInBar();
+  });
+
+  function toast(msg){
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._h);
+    t._h = setTimeout(()=>t.classList.remove('show'), 2600);
+  }
+
+  function uid(){ return 'FE-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).slice(2,6).toUpperCase(); }
+
+  function genWOId(){
+    const d = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    return `WO-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  }
+
+  // ---------- Create Work Order: request type roster ----------
+  const DEFAULT_REQUEST_TYPES = [
+    { label:'In-house Repair',            rescue:false },
+    { label:'Rescue Repair',              rescue:true  },
+    { label:'Rescue Ran out of Diesel',   rescue:true  },
+    { label:'PMS Activity',               rescue:false },
+    { label:'Rescue due to Accident',     rescue:true  }
+  ];
+  let customRequestTypes = [];
+
+  function getRequestTypes(){ return [...DEFAULT_REQUEST_TYPES, ...customRequestTypes]; }
+  function isRescueType(label){
+    const t = getRequestTypes().find(x=>x.label===label);
+    return t ? !!t.rescue : false;
+  }
+  async function saveCustomRequestTypes(){
+    await setJSON('fleet_request_types', customRequestTypes);
+  }
+  function fillRequestTypeSelect(){
+    const sel = $('wo-requestType');
+    if(!sel) return;
+    const current = sel.value;
+    sel.innerHTML = '<option value="">Select request type</option>' +
+      getRequestTypes().map(t=>`<option value="${t.label}">${t.label}${t.rescue?' (Rescue)':''}</option>`).join('');
+    if(getRequestTypes().some(t=>t.label===current)) sel.value = current;
+  }
+
+  // ---------- Clock ----------
+  function tickClock(){
+    const now = new Date();
+    $('clockTime').textContent = now.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'});
+    $('clockDate').textContent = now.toLocaleDateString('en-PH',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
+  }
+  tickClock(); setInterval(tickClock, 30000);
+
+  // ---------- Ageing calc ----------
+  const AGE_BUCKETS = [
+    { max:3,   label:'0-3 Days',    color:'#49b39a', dark:true },
+    { max:7,   label:'4-7 Days',    color:'#6ebf86', dark:true },
+    { max:14,  label:'8-14 Days',   color:'#93c96e', dark:true },
+    { max:30,  label:'15-30 Days',  color:'#c2c14a', dark:true },
+    { max:45,  label:'31-45 Days',  color:'#e0c93c', dark:true },
+    { max:60,  label:'46-60 Days',  color:'#e0a53c', dark:true },
+    { max:100, label:'61-100 Days', color:'#e08a3c', dark:true },
+    { max:150, label:'101-150 Days',color:'#dd6b47', dark:false },
+    { max:250, label:'151-250 Days',color:'#dd5b52', dark:false },
+    { max:Infinity, label:'251+ Days (Critical)', color:'#c23a3a', dark:false }
+  ];
+
+  function daysBetween(startStr, endStr){
+    const start = new Date(startStr + 'T00:00:00');
+    const end = new Date(endStr + 'T00:00:00');
+    return Math.max(0, Math.round((end-start)/86400000));
+  }
+
+  function computeAgeing(e){
+    if(!e.breakdownDate) return { days:null, bucket:null };
+    const endStr = e.completedDate ? e.completedDate : new Date().toISOString().slice(0,10);
+    const days = daysBetween(e.breakdownDate, endStr);
+    const bucket = AGE_BUCKETS.find(b=>days<=b.max);
+    return { days, bucket };
+  }
+
+  // ---------- Rendering ----------
+  function fmtDate(d){
+    if(!d) return '—';
+    const dt = new Date(d+'T00:00:00');
+    if(isNaN(dt)) return d;
+    return dt.toLocaleDateString('en-PH',{year:'numeric',month:'short',day:'2-digit'});
+  }
+
+  function statusClass(s){
+    return { Ongoing:'ongoing', Completed:'completed', 'On Hold':'onhold', Cancelled:'cancelled', 'Total Loss':'totalloss', Impounded:'impounded' }[s] || 'onhold';
+  }
+
+  // ---------- Latest Detailed Status → Dashboard Stat Card bucket ----------
+  // Reference table provided by ops: every standardized detailed status rolls
+  // up into exactly one of the four WFM Dashboard buckets below.
+  const DETAILED_STATUS_BUCKET = {
+    'IH: On-going repair / Diagnosis': 'Ongoing',
+    'IH: Awaiting PO': 'Ongoing',
+    'IH: Awaiting Parts Delivery': 'Ongoing',
+    'ACC: On-going repair': 'Ongoing',
+    'ACC: Awaiting LOA': 'Ongoing',
+    'ACC: Pending Insurance Docs': 'Ongoing',
+    "Impound / Hold by Gov't": 'Impounded',
+    'Total Loss': 'Total Loss',
+    'ACC: Glasswork Claim': 'Ongoing',
+    'Completed': 'Completed',
+    'Under Warranty': 'Ongoing',
+    'IH: The Job': 'Ongoing',
+    'Non-Technical Issue': 'Ongoing',
+    'IH: Overhauling': 'Ongoing'
+  };
+  const DETAILED_STATUS_OPTIONS = Object.keys(DETAILED_STATUS_BUCKET);
+
+  // Latest Detailed Status is no longer chosen manually — it always mirrors
+  // whichever Status Trail field was filled in most recently: Trail-3 if it
+  // has a value, otherwise Trail-2, otherwise Trail-1, otherwise blank.
+  function computeLatestStatus(e){
+    if(e.trail3 && e.trail3.trim()) return e.trail3.trim();
+    if(e.trail2 && e.trail2.trim()) return e.trail2.trim();
+    if(e.trail1 && e.trail1.trim()) return e.trail1.trim();
+    return '';
+  }
+
+  // Which of the four WFM Dashboard buckets a ledger entry currently belongs
+  // to. The standardized Latest Detailed Status (per DETAILED_STATUS_BUCKET)
+  // is the primary signal; older/unrecognized entries fall back to the
+  // coarse Status field (and, for Impounded, the legacy category1 check) so
+  // nothing that predates this feature disappears from the dashboard.
+  function dashboardBucket(e){
+    const mapped = DETAILED_STATUS_BUCKET[e.latestStatus];
+    if(mapped) return mapped;
+    if(e.status==='Completed') return 'Completed';
+    if(e.status==='Total Loss') return 'Total Loss';
+    if(e.category1==='Impoundment' && !['Completed','Cancelled','Total Loss'].includes(e.status)) return 'Impounded';
+    if(e.status==='Ongoing' || e.status==='On Hold') return 'Ongoing';
+    return null;
+  }
+
+  function updateStats(){
+    const total = entries.length;
+    const ongoing = entries.filter(e=>e.status==='Ongoing');
+    const completed = entries.filter(e=>e.status==='Completed').length;
+    const onHold = entries.filter(e=>e.status==='On Hold'||e.status==='Cancelled').length;
+    const criticalCount = entries.filter(e=>{
+      const info = computeAgeing(e);
+      return info.days!==null && info.days>=151 && e.status==='Ongoing';
+    }).length;
+    let avgAge = 0;
+    if(ongoing.length){
+      const sum = ongoing.reduce((acc,e)=>acc + (computeAgeing(e).days||0), 0);
+      avgAge = Math.round(sum/ongoing.length);
+    }
+    $('statTotal').textContent = total;
+    $('statOngoing').textContent = ongoing.length;
+    $('statCompleted').textContent = completed;
+    $('statCritical').textContent = criticalCount;
+    $('statAvgAge').textContent = avgAge;
+    $('statOnHold').textContent = onHold;
+  }
+
+  function populateFilterOptions(){
+    const ageMapSel = $('filterAgeMap');
+    const currentAM = ageMapSel.value;
+    ageMapSel.innerHTML = '<option value="">All age mapping</option>' + AGE_BUCKETS.map(b=>`<option value="${b.label}">${b.label}</option>`).join('');
+    ageMapSel.value = currentAM;
+
+    const typeSel = $('filterTruckType');
+    const currentType = typeSel.value;
+    const truckTypeOpts = getOptions('truckType');
+    typeSel.innerHTML = '<option value="">All truck types</option>' + truckTypeOpts.map(t=>`<option value="${t}">${t}</option>`).join('');
+    if(truckTypeOpts.includes(currentType)) typeSel.value = currentType;
+
+    const statusSel = $('filterStatus');
+    const currentStatus = statusSel.value;
+    const statusOpts = getOptions('status');
+    statusSel.innerHTML = '<option value="">All statuses</option>' + statusOpts.map(s=>`<option value="${s}">${s}</option>`).join('');
+    if(statusOpts.includes(currentStatus)) statusSel.value = currentStatus;
+  }
+
+  function sortEntries(list){
+    const dir = sortDir==='asc' ? 1 : -1;
+    return [...list].sort((a,b)=>{
+      let av, bv;
+      if(sortKey==='ageingDays'){ av = computeAgeing(a).days ?? -1; bv = computeAgeing(b).days ?? -1; }
+      else if(sortKey==='ageMapping'){ av = computeAgeing(a).days ?? -1; bv = computeAgeing(b).days ?? -1; }
+      else { av = (a[sortKey]||'').toString().toLowerCase(); bv = (b[sortKey]||'').toString().toLowerCase(); }
+      if(av<bv) return -1*dir;
+      if(av>bv) return 1*dir;
+      return 0;
+    });
+  }
+
+  function renderTable(){
+    const q = $('searchBox').value.trim().toLowerCase();
+    const statusF = $('filterStatus').value;
+    const ageMapF = $('filterAgeMap').value;
+    const typeF = $('filterTruckType').value;
+
+    let filtered = entries.filter(e=>{
+      if(statusF && e.status!==statusF) return false;
+      if(typeF && e.truckType!==typeF) return false;
+      if(ageMapF){
+        const info = computeAgeing(e);
+        if(!info.bucket || info.bucket.label!==ageMapF) return false;
+      }
+      if(q){
+        const hay = [e.workOrderNo,e.plateNo,e.requestor,e.driverName,e.odometer,e.designation,e.agency,e.parkingActual,e.make,e.truckType,e.mechanics,e.category1,e.category2,e.category3,e.latestStatus].join(' ').toLowerCase();
+        if(!hay.includes(q)) return false;
+      }
+      return true;
+    });
+
+    filtered = sortEntries(filtered);
+
+    const tbody = $('tableBody');
+    tbody.innerHTML = '';
+    if(filtered.length===0){
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="26">No entries match your filters.</td></tr>`;
+      updateStats();
+      return;
+    }
+
+    filtered.forEach(e=>{
+      const info = computeAgeing(e);
+      const days = info.days;
+      const bucket = info.bucket;
+      const pct = days===null ? 0 : Math.min(100, Math.round((days/250)*100));
+      const tr = document.createElement('tr');
+      tr.addEventListener('click', ()=>openDrawer(e.id));
+      tr.innerHTML = `
+        <td class="mono strong">${e.workOrderNo||'—'}</td>
+        <td class="mono strong">${e.plateNo||'—'}</td>
+        <td>${e.requestor||'—'}</td>
+        <td>${e.driverName||'—'}</td>
+        <td class="mono">${e.odometer?e.odometer+' km':'—'}</td>
+        <td>${e.ageClass||'—'}</td>
+        <td class="strong">${e.designation||'—'}</td>
+        <td>${e.agency||'—'}</td>
+        <td>${e.parkingActual||'—'}</td>
+        <td>${e.make||'—'}</td>
+        <td class="mono">${e.yearModel||'—'}</td>
+        <td>${e.truckType||'—'}</td>
+        <td class="mono">${fmtDate(e.breakdownDate)}</td>
+        <td class="mono">${e.completedDate?fmtDate(e.completedDate):'—'}</td>
+        <td class="mono strong">
+          <div class="agebar-wrap">
+            <span>${days===null?'—':days+'d'}</span>
+            <div class="agebar"><div class="agebar-fill" style="width:${pct}%;background:${bucket?bucket.color:'var(--line)'}"></div></div>
+          </div>
+        </td>
+        <td>${bucket?`<span class="age-mapping-tag" style="background:${bucket.color};${bucket.dark?'color:#1a2b1e;':'color:#fff;'}">${bucket.label}</span>`:'—'}</td>
+        <td>${e.category1||'—'}</td>
+        <td>${e.category2||'—'}</td>
+        <td>${e.category3||'—'}</td>
+        <td>${e.mechanics||'—'}</td>
+        <td>${e.trail1||'—'}</td>
+        <td>${e.trail2||'—'}</td>
+        <td>${e.trail3||'—'}</td>
+        <td style="white-space:normal;max-width:220px;">${e.latestStatus||'—'}</td>
+        <td><span class="pill ${statusClass(e.status)}">${e.status||'—'}</span></td>
+        <td>${(e.status==='Completed'||e.status==='Total Loss')
+              ? `<span class="pill ${e.status==='Total Loss'?'totalloss':'completed'}">${e.status==='Total Loss'?'Total Loss':'Done'}</span>`
+              : `<button type="button" class="btn btn-primary btn-sm" data-complete-btn="${e.id}">Completed / Check</button>`}
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll('[data-complete-btn]').forEach(btn=>{
+      btn.addEventListener('click', (ev)=>{
+        ev.stopPropagation();
+        markCompleted(btn.dataset.completeBtn);
+      });
+    });
+
+    updateStats();
+  }
+
+  async function markCompleted(id){
+    const e = entries.find(x=>x.id===id);
+    if(!e) return;
+    const note = prompt(`Mark ${e.workOrderNo||e.designation||'this work order'} as Completed?\nAdd a closing remark (optional, or Cancel to abort):`, computeLatestStatus(e)||'');
+    if(note===null) return;
+    e.status = 'Completed';
+    if(!e.completedDate) e.completedDate = new Date().toISOString().slice(0,10);
+    if(note.trim()){
+      // Feed the closing remark into the next open Status Trail slot so
+      // Latest Detailed Status (always derived from the trail) picks it up.
+      if(!e.trail1){ e.trail1 = note.trim(); }
+      else if(!e.trail2){ e.trail2 = note.trim(); }
+      else { e.trail3 = note.trim(); }
+    }
+    e.latestStatus = computeLatestStatus(e);
+    await setJSON('fleet_entries', entries);
+    renderTable();
+    renderAckList();
+    renderCompleteList();
+    renderWorkDashboard();
+    toast(`${e.workOrderNo||e.designation||'Work order'} marked complete and moved to the Complete module.`);
+  }
+
+  document.querySelectorAll('th.sortable').forEach(th=>{
+    th.addEventListener('click', ()=>{
+      const key = th.dataset.sort;
+      if(sortKey===key){ sortDir = sortDir==='asc'?'desc':'asc'; }
+      else { sortKey = key; sortDir = 'asc'; }
+      renderTable();
+    });
+  });
+
+  ['searchBox','filterStatus','filterAgeMap','filterTruckType'].forEach(id=>{
+    $(id).addEventListener('input', renderTable);
+    $(id).addEventListener('change', renderTable);
+  });
+  $('clearFiltersBtn').addEventListener('click', ()=>{
+    $('searchBox').value=''; $('filterStatus').value=''; $('filterAgeMap').value=''; $('filterTruckType').value='';
+    renderTable();
+  });
+
+  // ---------- Drawer / form ----------
+  function clearForm(){
+    ['workOrderNo','plateNo','ageClass','designation','agency','parkingActual','make','yearModel','truckType','breakdownDate','completedDate',
+     'category1','category2','category3','trail1','trail2','trail3'].forEach(k=>{ $('f-'+k).value=''; });
+    Array.from($('f-mechanics').options).forEach(o=>{ o.selected = false; });
+    $('f-latestStatusDisplay').value = '';
+    $('f-status').value = 'Ongoing';
+    $('f-ageingDaysDisplay').value='';
+    $('f-ageMappingDisplay').value='';
+  }
+
+  function refreshCalcDisplay(){
+    const bd = $('f-breakdownDate').value;
+    const cd = $('f-completedDate').value;
+    if(!bd){ $('f-ageingDaysDisplay').value=''; $('f-ageMappingDisplay').value=''; return; }
+    const info = computeAgeing({ breakdownDate:bd, completedDate:cd });
+    $('f-ageingDaysDisplay').value = info.days + ' day' + (info.days===1?'':'s') + (cd?' (closed)':' (ongoing, counting)');
+    $('f-ageMappingDisplay').value = info.bucket ? info.bucket.label : '';
+  }
+  $('f-breakdownDate').addEventListener('input', refreshCalcDisplay);
+  $('f-completedDate').addEventListener('input', refreshCalcDisplay);
+
+  function refreshLatestStatusDisplay(){
+    $('f-latestStatusDisplay').value = computeLatestStatus({
+      trail1: $('f-trail1').value, trail2: $('f-trail2').value, trail3: $('f-trail3').value
+    });
+  }
+  ['f-trail1','f-trail2','f-trail3'].forEach(id=>{
+    $(id).addEventListener('input', refreshLatestStatusDisplay);
+  });
+
+  function openDrawer(id, forceReadOnly){
+    editingId = id || null;
+    clearForm();
+    if(id){
+      const e = entries.find(x=>x.id===id);
+      if(!e) return;
+      $('drawerTitle').textContent = 'Edit Entry';
+      $('drawerSub').textContent = e.designation ? `Editing ${e.designation}` : 'Editing ledger entry.';
+      $('deleteEntryBtn').style.display = 'inline-block';
+      Object.keys(e).forEach(k=>{
+        const el = $('f-'+k);
+        if(el && k!=='mechanics') el.value = e[k];
+      });
+      refreshLatestStatusDisplay();
+      const chosenMechanics = (e.mechanics||'').split(',').map(s=>s.trim()).filter(Boolean);
+      Array.from($('f-mechanics').options).forEach(o=>{ o.selected = chosenMechanics.includes(o.value); });
+      refreshCalcDisplay();
+    } else {
+      $('drawerTitle').textContent = 'Add Entry';
+      $('drawerSub').textContent = 'Log a new unit into the downtime ledger.';
+      $('deleteEntryBtn').style.display = 'none';
+    }
+    const editable = canEdit() && !forceReadOnly;
+    document.querySelectorAll('#entryForm input, #entryForm select, #entryForm textarea').forEach(el=>{ el.disabled = !editable; });
+    $('saveEntryBtn').style.display = editable ? '' : 'none';
+    if(!editable){ $('deleteEntryBtn').style.display = 'none'; }
+    if(!editable){ $('drawerSub').textContent += forceReadOnly ? ' (Read-only — acknowledge first to unlock editing.)' : ' (Read-only — you are viewing, not editing.)'; }
+    $('overlay').classList.add('show');
+  }
+  function closeDrawer(){ $('overlay').classList.remove('show'); editingId=null; }
+
+  $('addEntryBtn').addEventListener('click', ()=>{
+    if(!canEdit()){ toast('Sign in as an Admin or Dispatcher to add entries.'); return; }
+    openDrawer(null);
+  });
+  $('closeDrawerBtn').addEventListener('click', closeDrawer);
+  $('cancelDrawerBtn').addEventListener('click', closeDrawer);
+  $('overlay').addEventListener('click', (e)=>{ if(e.target.id==='overlay') closeDrawer(); });
+
+  $('entryForm').addEventListener('submit', async (ev)=>{
+    ev.preventDefault();
+    if(!canEdit()){ toast('You do not have permission to save entries.'); return; }
+    const data = {
+      id: editingId || uid(),
+      workOrderNo: $('f-workOrderNo').value.trim(),
+      plateNo: $('f-plateNo').value.trim(),
+      requestor: $('f-requestor').value.trim(),
+      driverName: $('f-driverName').value.trim(),
+      odometer: $('f-odometer').value.trim(),
+      ageClass: $('f-ageClass').value,
+      designation: $('f-designation').value.trim(),
+      agency: $('f-agency').value.trim(),
+      parkingActual: $('f-parkingActual').value.trim(),
+      make: $('f-make').value.trim(),
+      yearModel: $('f-yearModel').value.trim(),
+      truckType: $('f-truckType').value.trim(),
+      breakdownDate: $('f-breakdownDate').value,
+      completedDate: $('f-completedDate').value,
+      category1: $('f-category1').value.trim(),
+      category2: $('f-category2').value.trim(),
+      category3: $('f-category3').value.trim(),
+      mechanics: Array.from($('f-mechanics').selectedOptions).map(o=>o.value).join(', '),
+      trail1: $('f-trail1').value.trim(),
+      trail2: $('f-trail2').value.trim(),
+      trail3: $('f-trail3').value.trim(),
+      status: $('f-status').value
+    };
+    data.latestStatus = computeLatestStatus(data);
+    // Completed / Total Loss are terminal detailed statuses — keep the coarse
+    // Status field in sync automatically so the two never disagree.
+    const detailedBucket = DETAILED_STATUS_BUCKET[data.latestStatus];
+    if(detailedBucket==='Completed'){
+      data.status = 'Completed';
+      if(!data.completedDate) data.completedDate = new Date().toISOString().slice(0,10);
+    } else if(detailedBucket==='Total Loss'){
+      data.status = 'Total Loss';
+    }
+    if(!data.designation){ toast('Designation is required.'); return; }
+    if(!data.breakdownDate){ toast('Breakdown Date is required.'); return; }
+
+    if(editingId){
+      const idx = entries.findIndex(x=>x.id===editingId);
+      data.acknowledged = entries[idx].acknowledged || false;
+      data.acknowledgedBy = entries[idx].acknowledgedBy || '';
+      data.acknowledgedAt = entries[idx].acknowledgedAt || '';
+      entries[idx] = data;
+    } else {
+      data.acknowledged = false;
+      data.acknowledgedBy = '';
+      data.acknowledgedAt = '';
+      entries.push(data);
+    }
+    await setJSON('fleet_entries', entries);
+    populateFilterOptions();
+    renderTable();
+    renderAckList();
+    renderCompleteList();
+    renderWorkDashboard();
+    closeDrawer();
+    toast(editingId ? 'Entry updated.' : 'Entry added.');
+  });
+
+  $('deleteEntryBtn').addEventListener('click', async ()=>{
+    if(!canEdit()){ toast('You do not have permission to delete entries.'); return; }
+    if(!editingId) return;
+    if(!confirm('Delete this ledger entry? This cannot be undone.')) return;
+    entries = entries.filter(x=>x.id!==editingId);
+    await setJSON('fleet_entries', entries);
+    populateFilterOptions();
+    renderTable();
+    renderAckList();
+    renderCompleteList();
+    renderWorkDashboard();
+    closeDrawer();
+    toast('Entry deleted.');
+  });
+
+  // ---------- Create Work Order (feeds Work Order To Acknowledge) ----------
+  function refreshWOPreview(){ const el = $('woIdPreview'); if(el) el.textContent = genWOId() + ' (preview)'; }
+
+  const woDriverInput = $('wo-driverName');
+  if(woDriverInput) woDriverInput.addEventListener('input', ()=>{
+    const pos = woDriverInput.selectionStart;
+    woDriverInput.value = woDriverInput.value.toUpperCase();
+    woDriverInput.setSelectionRange(pos,pos);
+  });
+
+  const fDriverInput = $('f-driverName');
+  if(fDriverInput) fDriverInput.addEventListener('input', ()=>{
+    const pos = fDriverInput.selectionStart;
+    fDriverInput.value = fDriverInput.value.toUpperCase();
+    fDriverInput.setSelectionRange(pos,pos);
+  });
+
+  const fOdometerInput = $('f-odometer');
+  if(fOdometerInput) fOdometerInput.addEventListener('input', ()=>{
+    fOdometerInput.value = fOdometerInput.value.replace(/\D/g,'');
+  });
+
+  const woPlateInput = $('wo-plate');
+  if(woPlateInput) woPlateInput.addEventListener('input', ()=>{
+    const before = woPlateInput.value;
+    const pos = woPlateInput.selectionStart;
+    const spacesBefore = before.slice(0,pos).match(/\s/g)?.length || 0;
+    woPlateInput.value = before.toUpperCase().replace(/\s+/g,'');
+    const newPos = Math.max(0, pos - spacesBefore);
+    woPlateInput.setSelectionRange(newPos,newPos);
+  });
+
+  function capitalizeFirst(el){
+    if(!el) return;
+    el.addEventListener('input', ()=>{
+      const v = el.value;
+      if(v.length && /[a-z]/.test(v[0])){
+        const pos = el.selectionStart;
+        el.value = v.charAt(0).toUpperCase() + v.slice(1);
+        el.setSelectionRange(pos,pos);
+      }
+    });
+  }
+  capitalizeFirst($('wo-reason'));
+  capitalizeFirst($('wo-locationAddress'));
+
+  if($('wo-mobile')) $('wo-mobile').addEventListener('input', ()=>{
+    $('wo-mobile').value = $('wo-mobile').value.replace(/\D/g,'').slice(0,10);
+  });
+  if($('wo-odometer')) $('wo-odometer').addEventListener('input', ()=>{
+    $('wo-odometer').value = $('wo-odometer').value.replace(/\D/g,'');
+  });
+
+  function updateWOLocationVisibility(){
+    const type = $('wo-requestType').value;
+    $('wo-locationBlock').classList.toggle('show', isRescueType(type));
+  }
+  if($('wo-requestType')) $('wo-requestType').addEventListener('change', updateWOLocationVisibility);
+
+  document.querySelectorAll('input[name="wo-locType"]').forEach(r=>{
+    r.addEventListener('change', ()=>{
+      const isAddr = document.querySelector('input[name="wo-locType"]:checked').value==='address';
+      $('wo-locAddressField').style.display = isAddr ? 'block':'none';
+      $('wo-locLatLongField').style.display = isAddr ? 'none':'grid';
+    });
+  });
+
+  function validateWOForm(){
+    const req = (el)=> el.value.trim().length>0;
+    if(!req($('wo-requestType'))){ toast('Select a request type.'); return false; }
+    if(!req($('wo-requestor'))){ toast('You must be signed in to submit a work order.'); return false; }
+    if(!req($('wo-agency'))){ toast('Select an agency.'); return false; }
+    if(!req($('wo-parking'))){ toast('Select a parking location.'); return false; }
+    if(!req($('wo-plate'))){ toast('Plate # is required.'); return false; }
+    if(!req($('wo-driverName'))){ toast('Driver name is required.'); return false; }
+    if(!/^\d{10}$/.test($('wo-mobile').value.trim())){ toast('Enter a valid 10-digit mobile number.'); return false; }
+    if(!/^\d+$/.test($('wo-odometer').value.trim())){ toast('Odometer must be numbers only.'); return false; }
+    if(!req($('wo-reason'))){ toast('Please describe the reason.'); return false; }
+    if(isRescueType($('wo-requestType').value)){
+      const isAddr = document.querySelector('input[name="wo-locType"]:checked').value==='address';
+      const locGood = isAddr ? $('wo-locationAddress').value.trim().length>0
+                              : ($('wo-latitude').value.trim().length>0 && $('wo-longitude').value.trim().length>0);
+      if(!locGood){ toast('Please provide a location for this rescue request.'); return false; }
+    }
+    return true;
+  }
+
+  function resetWOForm(){
+    $('woForm').reset();
+    updateRequestorField();
+    $('wo-locationBlock').classList.remove('show');
+    $('wo-locAddressField').style.display='block';
+    $('wo-locLatLongField').style.display='none';
+    refreshWOPreview();
+  }
+  if($('woResetBtn')) $('woResetBtn').addEventListener('click', resetWOForm);
+
+  if($('woForm')) $('woForm').addEventListener('submit', async (ev)=>{
+    ev.preventDefault();
+    if(!validateWOForm()) return;
+
+    const type = $('wo-requestType').value;
+    const rescue = isRescueType(type);
+    let locationStr = '';
+    if(rescue){
+      const isAddr = document.querySelector('input[name="wo-locType"]:checked').value==='address';
+      locationStr = isAddr ? $('wo-locationAddress').value.trim() : `${$('wo-latitude').value.trim()}, ${$('wo-longitude').value.trim()}`;
+    }
+    const woId = genWOId();
+    const requestor = $('wo-requestor').value;
+    const agency = $('wo-agency').value;
+    const parking = $('wo-parking').value;
+    const plate = $('wo-plate').value.trim();
+    const driverName = $('wo-driverName').value.trim();
+    const mobile = $('wo-mobile').value.trim();
+    const odometer = $('wo-odometer').value.trim();
+    const reason = $('wo-reason').value.trim();
+
+    const entry = {
+      id: uid(),
+      workOrderNo: woId,
+      plateNo: plate,
+      requestor: requestor,
+      driverName: driverName,
+      odometer: odometer,
+      ageClass: '',
+      designation: type,
+      parkingActual: parking,
+      agency: agency,
+      make: '',
+      yearModel: '',
+      truckType: '',
+      breakdownDate: new Date().toISOString().slice(0,10),
+      completedDate: '',
+      category1: /accident/i.test(type) ? 'Involve Accident' : 'Technical',
+      category2: '',
+      category3: '',
+      mechanics: '',
+      trail1: '',
+      trail2: '',
+      trail3: '',
+      latestStatus: '',
+      status: 'Ongoing',
+      acknowledged: false,
+      acknowledgedBy: '',
+      acknowledgedAt: ''
+    };
+
+    entries.push(entry);
+    await setJSON('fleet_entries', entries);
+    populateFilterOptions();
+    renderTable();
+    renderAckList();
+    renderCompleteList();
+    renderWorkDashboard();
+    resetWOForm();
+    toast(`${woId} created — sent to Work Order To Acknowledge.`);
+  });
+
+  // ---------- Bulk upload ----------
+  $('toggleBulkBtn').addEventListener('click', ()=>{
+    $('bulkBox').classList.toggle('show');
+  });
+
+  $('bulkFile').addEventListener('change', ()=>{
+    const file = $('bulkFile').files[0];
+    if(!file) return;
+    $('bulkFilename').textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      const ta = $('bulkText');
+      const existing = ta.value.trim();
+      const incoming = String(e.target.result||'').trim();
+      ta.value = existing ? existing + '\n' + incoming : incoming;
+    };
+    reader.onerror = ()=>toast('Could not read file.');
+    reader.readAsText(file);
+  });
+
+  $('bulkImportBtn').addEventListener('click', async ()=>{
+    if(!canEdit()){ toast('Sign in as an Admin or Dispatcher to bulk import.'); return; }
+    const raw = $('bulkText').value.trim();
+    if(!raw){ toast('Nothing to import.'); return; }
+    const lines = raw.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+    let added = 0, skipped = 0;
+    lines.forEach(line=>{
+      const parts = line.split('|').map(p=>p.trim());
+      if(parts.length < 9 || !parts[3] || !parts[8]){ skipped++; return; }
+      const [workOrderNo, plateNo, ageClass, designation, parkingActual, make, yearModel, truckType, breakdownDate, completedDate,
+              category1, category2, category3, mechanics, trail1, trail2, trail3, latestStatus, status] = parts;
+      entries.push({
+        id: uid(),
+        workOrderNo: workOrderNo||'', plateNo: plateNo||'',
+        ageClass: ageClass||'', designation, parkingActual: parkingActual||'', make: make||'',
+        yearModel: yearModel||'', truckType: truckType||'', breakdownDate, completedDate: completedDate||'',
+        category1: category1||'', category2: category2||'', category3: category3||'', mechanics: mechanics||'',
+        trail1: trail1||'', trail2: trail2||'', trail3: trail3||'',
+        latestStatus: computeLatestStatus({trail1, trail2, trail3}),
+        status: status || (completedDate ? 'Completed' : 'Ongoing'),
+        acknowledged: false, acknowledgedBy: '', acknowledgedAt: ''
+      });
+      added++;
+    });
+    await setJSON('fleet_entries', entries);
+    populateFilterOptions();
+    renderTable();
+    renderAckList();
+    renderCompleteList();
+    renderWorkDashboard();
+    $('bulkText').value=''; $('bulkFilename').textContent='';
+    $('bulkSummary').textContent = `Imported ${added}, skipped ${skipped} (of ${lines.length}).`;
+    toast(`Added ${added} entr${added===1?'y':'ies'} to the ledger.`);
+  });
+
+  // ---------- Module nav ----------
+  function switchModule(name){
+    document.querySelectorAll('.module-nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.module===name));
+    document.querySelectorAll('.module').forEach(m=>m.classList.toggle('active', m.id==='module-'+name));
+    // Re-render on entry so role-gated buttons (e.g. Mark Complete) always
+    // reflect the currently active user, even if a role switch happened
+    // while this module was in the background.
+    if(name==='dashboard') renderWorkDashboard();
+    if(name==='rmdashboard') renderRMDashboard();
+  }
+  document.querySelectorAll('.module-nav-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>switchModule(btn.dataset.module));
+  });
+
+  // ---------- Work Order To Acknowledge ----------
+  function renderAckList(){
+    const pending = entries.filter(e=>!e.acknowledged);
+    const badge = $('ackNavBadge');
+    badge.textContent = pending.length;
+    $('ackNavBadge').closest('.module-nav-btn').classList.toggle('has-pending', pending.length>0);
+
+    const list = $('ackList');
+    list.innerHTML = '';
+    if(pending.length===0){
+      list.innerHTML = '<div class="empty-ack">No work orders pending acknowledgement.</div>';
+      return;
+    }
+    const sorted = [...pending].sort((a,b)=> new Date(a.breakdownDate) - new Date(b.breakdownDate));
+    sorted.forEach(e=>{
+      const info = computeAgeing(e);
+      const card = document.createElement('div');
+      card.className = 'ack-card';
+      card.innerHTML = `
+        <div class="ack-main">
+          <div class="ack-top">
+            <span class="ack-wo">${e.workOrderNo||'No WO#'}</span>
+            <span class="ack-plate">${e.plateNo||'No plate'}</span>
+            <span class="pill forack">For Acknowledgement</span>
+          </div>
+          <div class="ack-meta">${e.designation||'—'} &nbsp;&middot;&nbsp; ${e.truckType||'—'} &nbsp;&middot;&nbsp; Reported ${fmtDate(e.breakdownDate)} &nbsp;&middot;&nbsp; ${info.days===null?'—':info.days+' day'+(info.days===1?'':'s')+' old'}</div>
+          ${e.latestStatus?`<div class="ack-status">${e.latestStatus}</div>`:''}
+        </div>
+        <div class="ack-actions">
+          <button type="button" class="btn btn-ghost btn-sm" data-ack-view="${e.id}">View</button>
+          <button type="button" class="btn btn-primary btn-sm" data-ack-confirm="${e.id}">Acknowledge</button>
+        </div>
+      `;
+      list.appendChild(card);
+    });
+
+    list.querySelectorAll('[data-ack-view]').forEach(btn=>{
+      btn.addEventListener('click', ()=>openDrawer(btn.dataset.ackView, true));
+    });
+    list.querySelectorAll('[data-ack-confirm]').forEach(btn=>{
+      btn.addEventListener('click', ()=>acknowledgeEntry(btn.dataset.ackConfirm));
+    });
+  }
+
+  async function acknowledgeEntry(id){
+    const e = entries.find(x=>x.id===id);
+    if(!e) return;
+    const name = prompt('Acknowledged by (name):', '');
+    if(name===null) return;
+    e.acknowledged = true;
+    e.acknowledgedBy = name.trim();
+    e.acknowledgedAt = new Date().toISOString();
+    await setJSON('fleet_entries', entries);
+    renderAckList();
+    renderTable();
+    renderWorkDashboard();
+    toast(`Acknowledged ${e.workOrderNo||e.designation||'work order'}.`);
+  }
+
+  // ---------- Complete module ----------
+  function renderCompleteList(){
+    const completedEntries = entries.filter(e=>e.status==='Completed');
+    const badge = $('completeNavBadge');
+    badge.textContent = completedEntries.length;
+
+    const list = $('completeList');
+    list.innerHTML = '';
+    if(completedEntries.length===0){
+      list.innerHTML = '<div class="empty-ack">No completed work orders yet.</div>';
+      return;
+    }
+    const sorted = [...completedEntries].sort((a,b)=> new Date(b.completedDate||b.breakdownDate) - new Date(a.completedDate||a.breakdownDate));
+    sorted.forEach(e=>{
+      const info = computeAgeing(e);
+      const card = document.createElement('div');
+      card.className = 'ack-card';
+      card.innerHTML = `
+        <div class="ack-main">
+          <div class="ack-top">
+            <span class="ack-wo">${e.workOrderNo||'No WO#'}</span>
+            <span class="ack-plate">${e.plateNo||'No plate'}</span>
+            <span class="pill completed">Completed</span>
+          </div>
+          <div class="ack-meta">${e.designation||'—'} &nbsp;&middot;&nbsp; ${e.truckType||'—'} &nbsp;&middot;&nbsp; Closed ${fmtDate(e.completedDate)} &nbsp;&middot;&nbsp; ${info.days===null?'—':info.days+' day'+(info.days===1?'':'s')+' total'}</div>
+          ${e.latestStatus?`<div class="ack-status">${e.latestStatus}</div>`:''}
+        </div>
+        <div class="ack-actions">
+          <button type="button" class="btn btn-ghost btn-sm" data-complete-view="${e.id}">View / Edit</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-complete-reopen="${e.id}">Reopen</button>
+        </div>
+      `;
+      list.appendChild(card);
+    });
+
+    list.querySelectorAll('[data-complete-view]').forEach(btn=>{
+      btn.addEventListener('click', ()=>openDrawer(btn.dataset.completeView));
+    });
+    list.querySelectorAll('[data-complete-reopen]').forEach(btn=>{
+      btn.addEventListener('click', ()=>reopenEntry(btn.dataset.completeReopen));
+    });
+  }
+
+  async function reopenEntry(id){
+    const e = entries.find(x=>x.id===id);
+    if(!e) return;
+    if(!confirm(`Reopen ${e.workOrderNo||e.designation||'this work order'} and set status back to Ongoing?`)) return;
+    e.status = 'Ongoing';
+    await setJSON('fleet_entries', entries);
+    renderTable();
+    renderCompleteList();
+    renderWorkDashboard();
+    toast(`${e.workOrderNo||e.designation||'Work order'} reopened.`);
+  }
+
+  // ---------- WFM Dashboard ----------
+  function renderWorkDashboard(){
+    const q = ($('dashSearchBox') ? $('dashSearchBox').value.trim().toLowerCase() : '');
+    const matches = e=>{
+      if(!q) return true;
+      const hay = [e.workOrderNo,e.plateNo,e.designation,e.agency,e.truckType,e.mechanics].join(' ').toLowerCase();
+      return hay.includes(q);
+    };
+
+    const toAck = entries.filter(e=>!e.acknowledged).filter(matches)
+      .sort((a,b)=> new Date(a.breakdownDate) - new Date(b.breakdownDate));
+    const ongoing = entries.filter(e=>e.acknowledged && dashboardBucket(e)==='Ongoing').filter(matches)
+      .sort((a,b)=> (computeAgeing(b).days??-1) - (computeAgeing(a).days??-1));
+    const complete = entries.filter(e=>dashboardBucket(e)==='Completed').filter(matches)
+      .sort((a,b)=> new Date(b.completedDate||b.breakdownDate) - new Date(a.completedDate||a.breakdownDate));
+
+    $('dashStatAck').textContent = toAck.length;
+    $('dashStatOngoing').textContent = ongoing.length;
+    $('dashStatComplete').textContent = complete.length;
+    $('dashAckCount').textContent = toAck.length;
+    $('dashOngoingCount').textContent = ongoing.length;
+    $('dashCompleteCount').textContent = complete.length;
+
+    // ---- Fleet-wide health stats (sourced from the Plate Number List registry) ----
+    // Bucket classification (Ongoing/Completed/Impounded/Total Loss) follows
+    // DETAILED_STATUS_BUCKET — see dashboardBucket() — with a fallback to the
+    // coarse Status/Category-1 fields for entries predating that mapping.
+    const totalTrucks = plateNumbers.length;
+    const notRunningPlates = new Set(
+      entries.filter(e=>!e.acknowledged || dashboardBucket(e)==='Ongoing').map(e=>normalizePlate(e.plateNo))
+    );
+    const impoundedPlates = new Set(
+      entries.filter(e=>dashboardBucket(e)==='Impounded').map(e=>normalizePlate(e.plateNo))
+    );
+    const totalLossPlates = new Set(
+      entries.filter(e=>dashboardBucket(e)==='Total Loss').map(e=>normalizePlate(e.plateNo))
+    );
+    const impoundedCount = plateNumbers.filter(p=>impoundedPlates.has(p.plate)).length;
+    const totalLossCount = plateNumbers.filter(p=>totalLossPlates.has(p.plate)).length;
+    const runningCount = plateNumbers.filter(p=>!notRunningPlates.has(p.plate)).length;
+    const dlRunningPct = totalTrucks>0 ? Math.round((runningCount/totalTrucks)*100) : 0;
+
+    $('dashStatTotalTrucks').textContent = totalTrucks;
+    $('dashStatTotalRunning').textContent = runningCount;
+    $('dashStatImpounded').textContent = impoundedCount;
+    $('dashStatTotalLoss').textContent = totalLossCount;
+    $('dashStatDLRunning').textContent = dlRunningPct + '%';
+
+    const wdCard = (e, actionsHtml)=>{
+      const info = computeAgeing(e);
+      const ageTxt = info.days===null ? '—' : info.days+'d';
+      return `
+        <div class="wd-card" data-wd-view="${e.id}">
+          <div class="wd-card-top">
+            <span class="wd-card-wo">${e.workOrderNo||'No WO#'} &middot; ${e.plateNo||'No plate'}</span>
+            <span class="wd-card-age">${ageTxt}</span>
+          </div>
+          <div class="wd-card-desig">${e.designation||'—'}</div>
+          <div class="wd-card-meta">${e.truckType||'—'}${e.latestStatus?' &middot; '+e.latestStatus:''}</div>
+          <div class="wd-card-actions">${actionsHtml}</div>
+        </div>`;
+    };
+
+    const renderColumn = (containerId, list, emptyMsg, actionsFor, forceReadOnly)=>{
+      const el = $(containerId);
+      if(list.length===0){ el.innerHTML = `<div class="wd-empty-col">${emptyMsg}</div>`; return; }
+      el.innerHTML = list.map(e=>wdCard(e, actionsFor(e))).join('');
+      el.querySelectorAll('[data-wd-view]').forEach(card=>{
+        card.addEventListener('click', (ev)=>{
+          if(ev.target.closest('button')) return;
+          openDrawer(card.dataset.wdView, forceReadOnly);
+        });
+      });
+    };
+
+    const canManageDash = canManageDashboardActions();
+
+    renderColumn('dashAckColumn', toAck, 'Nothing pending acknowledgement.', e=>
+      `<button type="button" class="btn btn-ghost btn-sm" data-wd-view-ro="${e.id}">View</button>`, true);
+    renderColumn('dashOngoingColumn', ongoing, 'Nothing ongoing right now.', e=>
+      `<button type="button" class="btn btn-ghost btn-sm" data-wd-view-btn="${e.id}">View</button>
+       ${canManageDash ? `<button type="button" class="btn btn-primary btn-sm" data-wd-complete="${e.id}">Mark Complete</button>` : ''}`);
+    renderColumn('dashCompleteColumn', complete, 'Nothing completed yet.', e=>
+      `<button type="button" class="btn btn-ghost btn-sm" data-wd-view-btn="${e.id}">View</button>
+       ${canManageDash ? `<button type="button" class="btn btn-ghost btn-sm" data-wd-reopen="${e.id}">Reopen</button>` : ''}`);
+
+    document.querySelectorAll('[data-wd-view-btn]').forEach(btn=>{
+      btn.addEventListener('click', (ev)=>{ ev.stopPropagation(); openDrawer(btn.dataset.wdViewBtn); });
+    });
+    document.querySelectorAll('[data-wd-view-ro]').forEach(btn=>{
+      btn.addEventListener('click', (ev)=>{ ev.stopPropagation(); openDrawer(btn.dataset.wdViewRo, true); });
+    });
+    document.querySelectorAll('[data-wd-ack]').forEach(btn=>{
+      btn.addEventListener('click', (ev)=>{ ev.stopPropagation(); acknowledgeEntry(btn.dataset.wdAck); });
+    });
+    document.querySelectorAll('[data-wd-complete]').forEach(btn=>{
+      btn.addEventListener('click', (ev)=>{ ev.stopPropagation(); markCompleted(btn.dataset.wdComplete); });
+    });
+    document.querySelectorAll('[data-wd-reopen]').forEach(btn=>{
+      btn.addEventListener('click', (ev)=>{ ev.stopPropagation(); reopenEntry(btn.dataset.wdReopen); });
+    });
+
+    renderRMDashboard();
+  }
+  const dashSearchEl = document.getElementById('dashSearchBox');
+  if(dashSearchEl) dashSearchEl.addEventListener('input', renderWorkDashboard);
+
+  // ---------- R&M Dashboard ----------
+  // Total DL Running % / DL Running % per Assigned Parking / Open WO per
+  // Designation / Overall Status Summary — recomputed alongside the WFM
+  // Dashboard whenever the ledger or plate registry changes.
+  function renderRMDashboard(){
+    const UNSET = '(Unspecified)';
+    const sortKeys = (a,b)=> a===UNSET?1 : b===UNSET?-1 : a.localeCompare(b);
+    const cardColors = ['var(--teal)','var(--blue)','var(--amber)','var(--violet)','var(--red)'];
+
+    // ---- Total DL Running % (same "running" definition as the WFM Dashboard) ----
+    const totalTrucks = plateNumbers.length;
+    const notRunningPlates = new Set(
+      entries.filter(e=>!e.acknowledged || dashboardBucket(e)==='Ongoing').map(e=>normalizePlate(e.plateNo))
+    );
+    const runningCount = plateNumbers.filter(p=>!notRunningPlates.has(p.plate)).length;
+    const dlRunningPct = totalTrucks>0 ? Math.round((runningCount/totalTrucks)*100) : 0;
+    $('rmStatDLRunning').textContent = dlRunningPct + '%';
+    $('rmStatDLRunningSub').textContent = `${runningCount} of ${totalTrucks} truck${totalTrucks===1?'':'s'} running`;
+
+    // ---- DL Running % per Assigned Parking ----
+    const parkRow = $('rmParkingRow');
+    if(totalTrucks===0){
+      parkRow.innerHTML = '<p class="roster-hint" style="margin:0;">No trucks enrolled yet.</p>';
+    } else {
+      const parkKeys = Array.from(new Set(plateNumbers.map(p=>p.parkingActual||UNSET))).sort(sortKeys);
+      parkRow.innerHTML = parkKeys.map((park,i)=>{
+        const trucksHere = plateNumbers.filter(p=>(p.parkingActual||UNSET)===park);
+        const runningHere = trucksHere.filter(p=>!notRunningPlates.has(p.plate)).length;
+        const pct = trucksHere.length>0 ? Math.round((runningHere/trucksHere.length)*100) : 0;
+        return `
+          <div class="stat-card" style="--stat-color:${cardColors[i % cardColors.length]};">
+            <div class="stat-num">${pct}%</div>
+            <div class="stat-label">${park}</div>
+            <div class="stat-sub">${runningHere}/${trucksHere.length} running</div>
+          </div>`;
+      }).join('');
+    }
+
+    // ---- Open WO per Designation (Ongoing or Impounded — not yet Completed/Total Loss) ----
+    const desigRow = $('rmDesigRow');
+    const openWOs = entries.filter(e=>{
+      const b = dashboardBucket(e);
+      return b==='Ongoing' || b==='Impounded';
+    });
+    if(openWOs.length===0){
+      desigRow.innerHTML = '<p class="roster-hint" style="margin:0;">No open work orders.</p>';
+    } else {
+      const desigCounts = {};
+      openWOs.forEach(e=>{
+        const d = e.designation || UNSET;
+        desigCounts[d] = (desigCounts[d]||0) + 1;
+      });
+      const desigKeys = Object.keys(desigCounts).sort(sortKeys);
+      desigRow.innerHTML = desigKeys.map((d,i)=>`
+        <div class="stat-card" style="--stat-color:${cardColors[i % cardColors.length]};">
+          <div class="stat-num">${desigCounts[d]}</div>
+          <div class="stat-label">${d}</div>
+        </div>`).join('');
+    }
+
+    // ---- Overall Status Summary (mutually exclusive, mirrors the Status field) ----
+    const statusRow = $('rmStatusRow');
+    const statusOrder = [
+      { key:'Ongoing',    color:'var(--blue)' },
+      { key:'On Hold',    color:'var(--amber)' },
+      { key:'Completed',  color:'var(--teal)' },
+      { key:'Cancelled',  color:'var(--text-mute)' },
+      { key:'Total Loss', color:'var(--red)' }
+    ];
+    if(entries.length===0){
+      statusRow.innerHTML = '<p class="roster-hint" style="margin:0;">No work orders logged yet.</p>';
+    } else {
+      statusRow.innerHTML = statusOrder.map(s=>{
+        const count = entries.filter(e=>e.status===s.key).length;
+        return `
+          <div class="stat-card" style="--stat-color:${s.color};">
+            <div class="stat-num">${count}</div>
+            <div class="stat-label">${s.key}</div>
+          </div>`;
+      }).join('') + `
+        <div class="stat-card" style="--stat-color:var(--violet);">
+          <div class="stat-num">${entries.length}</div>
+          <div class="stat-label">Total WO</div>
+        </div>`;
+    }
+  }
+
+  // ---------- Roster: dropdown option manager ----------
+  const FIELD_CONFIGS = [
+    { key:'mechanics',     label:'Assigned Mechanics',        placeholder:'Add a mechanic name' },
+    { key:'make',          label:'Make',                      placeholder:'Add a make' },
+    { key:'parkingActual', label:'Assigned Parking Actual',   placeholder:'Add a parking / bay location' },
+    { key:'yearModel',     label:'Year Model',                placeholder:'Add a year' },
+    { key:'truckType',     label:'Truck Type',                placeholder:'Add a truck type' },
+    { key:'requestor',     label:'Requestor',                 placeholder:'Add a requestor name' },
+    { key:'agency',        label:'Agency',                    placeholder:'Add an agency name' }
+  ];
+
+  const FIELD_LOOKUP = {};
+  FIELD_CONFIGS.forEach(cfg=>{
+    FIELD_LOOKUP[cfg.key.toLowerCase()] = cfg.key;
+    FIELD_LOOKUP[cfg.label.toLowerCase()] = cfg.key;
+  });
+  FIELD_LOOKUP['mechanic'] = 'mechanics';
+  FIELD_LOOKUP['assigned mechanic/s'] = 'mechanics';
+  FIELD_LOOKUP['parking'] = 'parkingActual';
+  FIELD_LOOKUP['assigned parking'] = 'parkingActual';
+  FIELD_LOOKUP['year'] = 'yearModel';
+  FIELD_LOOKUP['year model'] = 'yearModel';
+  FIELD_LOOKUP['truck type'] = 'truckType';
+  const REQUEST_TYPE_FIELD_NAMES = ['request type', 'requesttype', 'request type (work order)', 'requesttypes'];
+
+  const DEFAULT_OPTIONS = {
+    mechanics: [],
+    make: ['Isuzu','Foton','Hino','Fuso','Dongfeng','Shacman','FAW','Toyota'],
+    parkingActual: ['SOC5 EP','SOC 8','SOC6 EP','BOCAUE','SOC11','SOC12','SOC9','SOC7'],
+    yearModel: (()=>{ const a=[]; for(let y=2030;y>=2010;y--) a.push(String(y)); return a; })(),
+    truckType: ['4W-11ft','6W-14ft','TOWTRUCK','4W-15ft','6W-16ft','10W-32ft','4W AUV','4W CV','6W CV','10W CV','10W WV'],
+    status: ['Ongoing','Completed','On Hold','Cancelled','Total Loss'],
+    requestor: [],
+    agency: [
+      "Advance Certified Employment Inc.",
+      "AIMS Corporate Resources Inc.",
+      "Asia-Now Enterprises Inc.",
+      "Bacolod Express Manpower Solutions Inc.",
+      "Call Management Solutions Inc.",
+      "Combined Movers Inc.",
+      "D'Vinci Manpower Services Corp.",
+      "Dimak Solutions Corp.",
+      "Diversified Services Solutions Inc.",
+      "Excel Quality Integrated Solutions Inc.",
+      "Expercs Inc.",
+      "Fast Deli Serv Inc.",
+      "Flying High Energy Express Services Corporation",
+      "INT Logistics Inc.",
+      "JG Manpo. Janitorial & Messengerial Services Contractor",
+      "Jobs Advancement Career Consultant Inc",
+      "Jobspring Solutions Inc.",
+      "Martin Development Corp.",
+      "Mirof Resources Inc.",
+      "Points Business & Industrial Services, Inc.",
+      "QuestServ Solutions Inc.",
+      "R4M Infinite Ventures Inc.",
+      "RGS General Services Corp.",
+      "Sinobridge Philippines Inc.",
+      "Staffluence Resources Inc.",
+      "Strategic Alternative Corporation",
+      "Tri-S Manpower Management Services",
+      "TYR Stronghold Inc.",
+      "Ventures Alliance Management Corp.",
+      "XMD Logistics Services"
+    ]
+  };
+
+  let customOptions = { mechanics:[], make:[], parkingActual:[], yearModel:[], truckType:[], status:[], requestor:[], agency:[] };
+
+  function getOptions(key){
+    return [...DEFAULT_OPTIONS[key], ...customOptions[key]];
+  }
+
+  async function saveCustomOptions(){
+    await setJSON('fleet_dropdown_options', customOptions);
+  }
+
+  function fillSelect(el, key, placeholder){
+    if(!el) return;
+    const prevSelected = el.multiple
+      ? Array.from(el.selectedOptions).map(o=>o.value)
+      : [el.value];
+    const opts = getOptions(key);
+    let html = placeholder!==null ? `<option value="">${placeholder}</option>` : '';
+    html += opts.map(o=>`<option>${o}</option>`).join('');
+    el.innerHTML = html;
+    if(el.multiple){
+      Array.from(el.options).forEach(o=>{ o.selected = prevSelected.includes(o.value); });
+    } else if(opts.includes(prevSelected[0])){
+      el.value = prevSelected[0];
+    }
+  }
+
+  function refreshAllDropdowns(){
+    fillSelect($('f-make'), 'make', 'Select make');
+    fillSelect($('f-yearModel'), 'yearModel', 'Select year model');
+    fillSelect($('f-truckType'), 'truckType', 'Select truck type');
+    fillSelect($('f-parkingActual'), 'parkingActual', 'Select parking');
+    fillSelect($('f-mechanics'), 'mechanics', null);
+    fillSelect($('f-status'), 'status', null);
+    if(!$('f-status').value) $('f-status').value = getOptions('status')[0] || '';
+    fillSelect($('wo-parking'), 'parkingActual', 'Select parking');
+    fillSelect($('wo-agency'), 'agency', 'Select agency');
+    fillSelect($('f-agency'), 'agency', 'Select agency');
+    fillPlateAddSelects();
+    populateFilterOptions();
+  }
+
+  function renderRosterGrid(){
+    const grid = $('rosterGrid');
+    grid.innerHTML = '';
+    FIELD_CONFIGS.forEach(cfg=>{
+      const card = document.createElement('div');
+      card.className = 'roster-card';
+      const builtins = DEFAULT_OPTIONS[cfg.key];
+      const customs = customOptions[cfg.key];
+      const chips = [
+        ...builtins.map(v=>({ value:v, builtin:true })),
+        ...customs.map(v=>({ value:v, builtin:false }))
+      ];
+      card.innerHTML = `
+        <h3>${cfg.label}</h3>
+        <p class="roster-hint">${builtins.length} built-in${customs.length?`, ${customs.length} added`:''}</p>
+        <div class="chip-list" data-field="${cfg.key}">
+          ${chips.length ? chips.map(c=>`
+            <span class="chip ${c.builtin?'builtin':''}">${c.value}${c.builtin?'':` <button type="button" data-remove="${cfg.key}" data-value="${c.value}">&times;</button>`}</span>
+          `).join('') : '<span class="roster-empty">No options yet — add one below.</span>'}
+        </div>
+        <div class="roster-add-row">
+          <input type="text" placeholder="${cfg.placeholder}" data-add-input="${cfg.key}">
+          <button type="button" class="btn btn-sm" data-add-btn="${cfg.key}">Add</button>
+        </div>
+        <button type="button" class="roster-bulk-toggle" data-bulk-toggle="${cfg.key}">Bulk add &darr;</button>
+        <div class="roster-bulk-box" data-bulk-box="${cfg.key}">
+          <textarea placeholder="One ${cfg.label.toLowerCase()} per line" data-bulk-text="${cfg.key}"></textarea>
+          <div class="roster-bulk-row">
+            <label class="file-btn-sm">Upload .csv/.txt<input type="file" accept=".csv,.txt" data-bulk-file="${cfg.key}"></label>
+            <span class="bulk-filename" data-bulk-filename="${cfg.key}"></span>
+            <div class="spacer"></div>
+            <span class="roster-bulk-summary" data-bulk-summary="${cfg.key}"></span>
+            <button type="button" class="btn btn-primary btn-sm" data-bulk-import="${cfg.key}">Import all</button>
+          </div>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+
+    const rtCard = document.createElement('div');
+    rtCard.className = 'roster-card';
+    const rtBuiltins = DEFAULT_REQUEST_TYPES;
+    const rtCustoms = customRequestTypes;
+    const rtChips = [
+      ...rtBuiltins.map(t=>({ ...t, builtin:true })),
+      ...rtCustoms.map(t=>({ ...t, builtin:false }))
+    ];
+    rtCard.innerHTML = `
+      <h3>Request Type (Work Order)</h3>
+      <p class="roster-hint">${rtBuiltins.length} built-in${rtCustoms.length?`, ${rtCustoms.length} added`:''}</p>
+      <div class="chip-list" data-field="requestType">
+        ${rtChips.length ? rtChips.map(t=>`
+          <span class="chip ${t.builtin?'builtin':''}">${t.label} <span class="chip-cat ${t.rescue?'rescue':'routine'}">${t.rescue?'Rescue':'Routine'}</span>${t.builtin?'':` <button type="button" data-remove-rt="${t.label}">&times;</button>`}</span>
+        `).join('') : '<span class="roster-empty">No request types yet — add one below.</span>'}
+      </div>
+      <div class="roster-add-row">
+        <input type="text" placeholder="Add a request type label" data-add-input-rt>
+        <button type="button" class="btn btn-sm" data-add-btn-rt>Add</button>
+      </div>
+      <p class="roster-hint" style="margin-top:8px;">You'll be asked whether the new type is a Rescue request (requires Location) after entering the label.</p>
+      <button type="button" class="roster-bulk-toggle" data-bulk-toggle="requestType">Bulk add &darr;</button>
+      <div class="roster-bulk-box" data-bulk-box="requestType">
+        <p class="roster-hint" style="margin:0 0 6px;">One per line: <code>Label</code> or <code>Label | Rescue</code> (add <code>Rescue</code> to flag it as a rescue-type request; omit for Routine).</p>
+        <textarea placeholder="Tire Blowout|Rescue&#10;PMS Schedule" data-bulk-text="requestType"></textarea>
+        <div class="roster-bulk-row">
+          <label class="file-btn-sm">Upload .csv/.txt<input type="file" accept=".csv,.txt" data-bulk-file="requestType"></label>
+          <span class="bulk-filename" data-bulk-filename="requestType"></span>
+          <div class="spacer"></div>
+          <span class="roster-bulk-summary" data-bulk-summary="requestType"></span>
+          <button type="button" class="btn btn-primary btn-sm" data-bulk-import="requestType">Import all</button>
+        </div>
+      </div>
+    `;
+    grid.appendChild(rtCard);
+
+    rtCard.querySelectorAll('[data-remove-rt]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const label = btn.dataset.removeRt;
+        customRequestTypes = customRequestTypes.filter(t=>t.label!==label);
+        await saveCustomRequestTypes();
+        renderRosterGrid();
+        fillRequestTypeSelect();
+        toast(`Removed "${label}" from Request Type roster.`);
+      });
+    });
+    const addRequestTypeInline = async ()=>{
+      const input = rtCard.querySelector('[data-add-input-rt]');
+      const label = input.value.trim();
+      if(!label) return;
+      if(getRequestTypes().some(t=>t.label.toLowerCase()===label.toLowerCase())){ toast('That request type already exists.'); return; }
+      const rescue = confirm('Is this a RESCUE-type request (requires Location)?\n\nOK = Rescue, Cancel = Routine');
+      customRequestTypes.push({label, rescue});
+      await saveCustomRequestTypes();
+      renderRosterGrid();
+      fillRequestTypeSelect();
+      toast(`Added "${label}" to Request Type roster.`);
+    };
+    rtCard.querySelector('[data-add-btn-rt]').addEventListener('click', addRequestTypeInline);
+    rtCard.querySelector('[data-add-input-rt]').addEventListener('keydown', (e)=>{
+      if(e.key==='Enter'){ e.preventDefault(); addRequestTypeInline(); }
+    });
+
+    grid.querySelectorAll('[data-remove]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const key = btn.dataset.remove;
+        const value = btn.dataset.value;
+        customOptions[key] = customOptions[key].filter(v=>v!==value);
+        await saveCustomOptions();
+        renderRosterGrid();
+        refreshAllDropdowns();
+        toast(`Removed "${value}" from ${FIELD_CONFIGS.find(f=>f.key===key).label}.`);
+      });
+    });
+
+    const addOption = async (key)=>{
+      const input = grid.querySelector(`[data-add-input="${key}"]`);
+      const value = input.value.trim();
+      if(!value){ return; }
+      const exists = getOptions(key).some(v=>v.toLowerCase()===value.toLowerCase());
+      if(exists){ toast('That option already exists.'); return; }
+      customOptions[key].push(value);
+      await saveCustomOptions();
+      renderRosterGrid();
+      refreshAllDropdowns();
+      toast(`Added "${value}" to ${FIELD_CONFIGS.find(f=>f.key===key).label}.`);
+    };
+
+    grid.querySelectorAll('[data-add-btn]').forEach(btn=>{
+      btn.addEventListener('click', ()=>addOption(btn.dataset.addBtn));
+    });
+    grid.querySelectorAll('[data-add-input]').forEach(input=>{
+      input.addEventListener('keydown', (e)=>{
+        if(e.key==='Enter'){ e.preventDefault(); addOption(input.dataset.addInput); }
+      });
+    });
+
+    // ---------- Per-category bulk add ----------
+    grid.querySelectorAll('[data-bulk-toggle]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const key = btn.dataset.bulkToggle;
+        grid.querySelector(`[data-bulk-box="${key}"]`).classList.toggle('show');
+      });
+    });
+
+    grid.querySelectorAll('[data-bulk-file]').forEach(fileInput=>{
+      fileInput.addEventListener('change', ()=>{
+        const key = fileInput.dataset.bulkFile;
+        const file = fileInput.files[0];
+        if(!file) return;
+        grid.querySelector(`[data-bulk-filename="${key}"]`).textContent = file.name;
+        const reader = new FileReader();
+        reader.onload = (e)=>{
+          const ta = grid.querySelector(`[data-bulk-text="${key}"]`);
+          const existing = ta.value.trim();
+          const incoming = String(e.target.result||'').trim();
+          ta.value = existing ? existing + '\n' + incoming : incoming;
+        };
+        reader.onerror = ()=>toast('Could not read file.');
+        reader.readAsText(file);
+      });
+    });
+
+    grid.querySelectorAll('[data-bulk-import]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        if(!isAdmin()){ toast('Sign in as an Admin to manage the roster.'); return; }
+        const key = btn.dataset.bulkImport;
+        const ta = grid.querySelector(`[data-bulk-text="${key}"]`);
+        const raw = ta.value.trim();
+        if(!raw){ toast('Nothing to import.'); return; }
+        const lines = raw.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+        let added = 0, skipped = 0;
+
+        if(key === 'requestType'){
+          lines.forEach(line=>{
+            const parts = line.split('|').map(p=>p.trim());
+            const label = parts[0];
+            if(!label){ skipped++; return; }
+            const rescueRaw = (parts[1] || '').toLowerCase();
+            const rescue = rescueRaw === 'rescue' || rescueRaw === 'yes' || rescueRaw === 'true';
+            if(getRequestTypes().some(t=>t.label.toLowerCase()===label.toLowerCase())){ skipped++; return; }
+            customRequestTypes.push({ label, rescue });
+            added++;
+          });
+          await saveCustomRequestTypes();
+          fillRequestTypeSelect();
+        } else {
+          lines.forEach(line=>{
+            const value = line.split('|')[0].trim();
+            if(!value){ skipped++; return; }
+            const exists = getOptions(key).some(v=>v.toLowerCase()===value.toLowerCase());
+            if(exists){ skipped++; return; }
+            customOptions[key].push(value);
+            added++;
+          });
+          await saveCustomOptions();
+          refreshAllDropdowns();
+        }
+
+        renderRosterGrid();
+        const label = key==='requestType' ? 'Request Type' : FIELD_CONFIGS.find(f=>f.key===key).label;
+        toast(`Added ${added} option${added===1?'':'s'} to ${label}${skipped?`, skipped ${skipped}`:''}.`);
+      });
+    });
+
+    applyAccessControl();
+  }
+
+  // ---------- Plate Number List ----------
+  let plateNumbers = []; // [{ plate, parkingActual, make, yearModel, truckType }]
+
+  function normalizePlate(v){ return (v||'').toString().toUpperCase().replace(/\s+/g,'').trim(); }
+
+  // Accepts the manual "|" pipe format, a tab-separated paste (copying cells
+  // directly from Excel/Sheets), or a true comma-CSV row (the downloaded
+  // template, opened/edited in a spreadsheet, and saved or uploaded back).
+  function splitPlateLine(line){
+    const delim = line.includes('|') ? '|' : (line.includes('\t') ? '\t' : ',');
+    return line.split(delim).map(p=>p.trim());
+  }
+
+  function migratePlateRecord(p){
+    // Backward-compat: earlier version stored plain plate strings.
+    if(typeof p === 'string') return { plate: normalizePlate(p), ageClass:'', vehicleModel1:'', vehicleModel2:'', chassisNo:'', engineNo:'', grossWeight:'', registeredOwner:'', provisionalAuthority:'', designation:'', parkingActual:'', make:'', yearModel:'', truckType:'' };
+    return {
+      plate: normalizePlate(p.plate),
+      ageClass: (p.ageClass||'').toString().trim(),
+      vehicleModel1: (p.vehicleModel1||'').toString().trim(),
+      vehicleModel2: (p.vehicleModel2||'').toString().trim(),
+      chassisNo: (p.chassisNo||'').toString().trim(),
+      engineNo: (p.engineNo||'').toString().trim(),
+      grossWeight: (p.grossWeight||'').toString().trim(),
+      registeredOwner: (p.registeredOwner||'').toString().trim(),
+      provisionalAuthority: (p.provisionalAuthority||'').toString().trim(),
+      designation: (p.designation||'').toString().trim(),
+      parkingActual: (p.parkingActual||'').toString().trim(),
+      make: (p.make||'').toString().trim(),
+      yearModel: (p.yearModel||'').toString().trim(),
+      truckType: (p.truckType||'').toString().trim()
+    };
+  }
+
+  async function savePlateNumbers(){ await setJSON('fleet_plate_numbers', plateNumbers); }
+
+  function refreshPlateDatalist(){
+    const dl = $('plateDatalist');
+    if(!dl) return;
+    dl.innerHTML = plateNumbers.map(p=>`<option value="${p.plate}">`).join('');
+  }
+
+  function fillPlateAddSelects(){
+    fillSelect($('plateAddParking'), 'parkingActual', 'Select parking');
+    fillSelect($('plateAddMake'), 'make', 'Select make');
+    fillSelect($('plateAddYearModel'), 'yearModel', 'Select year model');
+    fillSelect($('plateAddTruckType'), 'truckType', 'Select truck type');
+  }
+
+  // Total Trucks / Total per Make / Total per Truck Type / Total per Designation —
+  // recomputed from the full (unfiltered) roster whenever it renders.
+  function renderPlateSummary(){
+    const UNSET = '(Unspecified)';
+    const sortKeys = (a,b)=> a===UNSET?1 : b===UNSET?-1 : a.localeCompare(b);
+    const cardColors = ['var(--blue)','var(--teal)','var(--amber)','var(--violet)','var(--red)'];
+
+    $('plateStatTotal').textContent = plateNumbers.length;
+
+    // Builds a row of stat cards from a field name, counting occurrences.
+    function buildStatCards(containerId, field){
+      const container = $(containerId);
+      if(plateNumbers.length===0){
+        container.innerHTML = '<p class="roster-hint" style="margin:0;">No trucks enrolled yet.</p>';
+        return;
+      }
+      const counts = {};
+      plateNumbers.forEach(p=>{
+        const key = p[field] || UNSET;
+        counts[key] = (counts[key]||0) + 1;
+      });
+      const keys = Object.keys(counts).sort(sortKeys);
+      container.innerHTML = keys.map((key,i)=>`
+        <div class="stat-card" style="--stat-color:${cardColors[i % cardColors.length]};">
+          <div class="stat-num">${counts[key]}</div>
+          <div class="stat-label">${key}</div>
+        </div>
+      `).join('');
+    }
+
+    // ---- Total per Make ----
+    buildStatCards('plateStatMakeRow', 'make');
+
+    // ---- Total per Truck Type ----
+    buildStatCards('plateStatTypeRow', 'truckType');
+
+    // ---- Total per Designation ----
+    buildStatCards('plateStatDesigRow', 'designation');
+  }
+
+  function renderPlateList(){
+    const canEditPlates = isAdmin();
+    const q = ($('plateSearchBox') ? $('plateSearchBox').value.trim().toUpperCase() : '');
+    const sorted = [...plateNumbers].sort((a,b)=>a.plate.localeCompare(b.plate));
+    const filtered = q ? sorted.filter(p=>[p.plate,p.ageClass,p.vehicleModel1,p.vehicleModel2,p.chassisNo,p.engineNo,p.grossWeight,p.registeredOwner,p.provisionalAuthority,p.designation,p.parkingActual,p.make,p.yearModel,p.truckType].join(' ').toUpperCase().includes(q)) : sorted;
+
+    $('plateCountHint').textContent = `${plateNumbers.length} truck${plateNumbers.length===1?'':'s'} enrolled${q ? ` — ${filtered.length} match${filtered.length===1?'':'es'} "${q}"` : ''}.`;
+
+    const tbody = $('plateTableBody');
+    if(filtered.length===0){
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="15">${plateNumbers.length===0 ? 'No trucks enrolled yet.' : 'No trucks match your search.'}</td></tr>`;
+    } else {
+      tbody.innerHTML = filtered.map(p=>`
+        <tr>
+          <td class="mono strong">${p.plate}</td>
+          <td>${p.ageClass||'—'}</td>
+          <td>${p.vehicleModel1||'—'}</td>
+          <td>${p.vehicleModel2||'—'}</td>
+          <td class="mono">${p.chassisNo||'—'}</td>
+          <td class="mono">${p.engineNo||'—'}</td>
+          <td>${p.grossWeight||'—'}</td>
+          <td>${p.registeredOwner||'—'}</td>
+          <td>${p.provisionalAuthority||'—'}</td>
+          <td>${p.designation||'—'}</td>
+          <td>${p.parkingActual||'—'}</td>
+          <td>${p.make||'—'}</td>
+          <td class="mono">${p.yearModel||'—'}</td>
+          <td>${p.truckType||'—'}</td>
+          <td>${canEditPlates ? `<button type="button" class="btn btn-ghost btn-sm" data-remove-plate="${p.plate}">Remove</button>` : '—'}</td>
+        </tr>
+      `).join('');
+      tbody.querySelectorAll('[data-remove-plate]').forEach(btn=>{
+        btn.addEventListener('click', async ()=>{
+          if(!isAdmin()){ toast('Sign in as an Admin to manage the plate list.'); return; }
+          const plate = btn.dataset.removePlate;
+          if(!confirm(`Remove ${plate} from the Plate Number List?`)) return;
+          plateNumbers = plateNumbers.filter(p=>p.plate!==plate);
+          await savePlateNumbers();
+          renderPlateList();
+          renderWorkDashboard();
+          toast(`Removed ${plate} from the Plate Number List.`);
+        });
+      });
+    }
+
+    refreshPlateDatalist();
+    renderPlateSummary();
+  }
+
+  async function addPlateNumber(record){
+    if(!isAdmin()){ toast('Sign in as an Admin to manage the plate list.'); return; }
+    const plate = normalizePlate(record.plate);
+    if(!plate){ toast('Plate # is required.'); return; }
+    if(plateNumbers.some(p=>p.plate===plate)){ toast(`${plate} is already on the list.`); return; }
+    plateNumbers.push({
+      plate,
+      ageClass: (record.ageClass||'').trim(),
+      vehicleModel1: (record.vehicleModel1||'').trim(),
+      vehicleModel2: (record.vehicleModel2||'').trim(),
+      chassisNo: (record.chassisNo||'').trim(),
+      engineNo: (record.engineNo||'').trim(),
+      grossWeight: (record.grossWeight||'').trim(),
+      registeredOwner: (record.registeredOwner||'').trim(),
+      provisionalAuthority: (record.provisionalAuthority||'').trim(),
+      designation: (record.designation||'').trim(),
+      parkingActual: (record.parkingActual||'').trim(),
+      make: (record.make||'').trim(),
+      yearModel: (record.yearModel||'').trim(),
+      truckType: (record.truckType||'').trim()
+    });
+    await savePlateNumbers();
+    renderPlateList();
+    renderWorkDashboard();
+    toast(`Added ${plate} to the Plate Number List.`);
+  }
+
+  if($('plateAddBtn')) $('plateAddBtn').addEventListener('click', ()=>{
+    addPlateNumber({
+      plate: $('plateAddPlate').value,
+      ageClass: $('plateAddAgeClass').value,
+      vehicleModel1: $('plateAddVehicleModel1').value,
+      vehicleModel2: $('plateAddVehicleModel2').value,
+      chassisNo: $('plateAddChassisNo').value,
+      engineNo: $('plateAddEngineNo').value,
+      grossWeight: $('plateAddGrossWeight').value,
+      registeredOwner: $('plateAddRegisteredOwner').value,
+      provisionalAuthority: $('plateAddProvisionalAuthority').value,
+      designation: $('plateAddDesignation').value,
+      parkingActual: $('plateAddParking').value,
+      make: $('plateAddMake').value,
+      yearModel: $('plateAddYearModel').value,
+      truckType: $('plateAddTruckType').value
+    });
+    $('plateAddPlate').value = '';
+    $('plateAddAgeClass').value = '';
+    $('plateAddVehicleModel1').value = '';
+    $('plateAddVehicleModel2').value = '';
+    $('plateAddChassisNo').value = '';
+    $('plateAddEngineNo').value = '';
+    $('plateAddGrossWeight').value = '';
+    $('plateAddRegisteredOwner').value = '';
+    $('plateAddProvisionalAuthority').value = '';
+    $('plateAddDesignation').value = '';
+    $('plateAddParking').value = '';
+    $('plateAddMake').value = '';
+    $('plateAddYearModel').value = '';
+    $('plateAddTruckType').value = '';
+    $('plateAddPlate').focus();
+  });
+  if($('plateAddPlate')) $('plateAddPlate').addEventListener('keydown', (e)=>{
+    if(e.key==='Enter'){ e.preventDefault(); $('plateAddBtn').click(); }
+  });
+  if($('plateSearchBox')) $('plateSearchBox').addEventListener('input', renderPlateList);
+
+  if($('plateBulkToggle')) $('plateBulkToggle').addEventListener('click', ()=>{
+    $('plateBulkBox').classList.toggle('show');
+  });
+  if($('plateTemplateBtn')) $('plateTemplateBtn').addEventListener('click', ()=>{
+    const rows = [
+      ['Plate #','Age Class','Vehicle Model 1','Vehicle Model 2','Chassis #','Engine #','Gross Weight','Registered Owner','Provisional Authority','Designation','Assigned Parking Actual','Make','Year Model','Truck Type'],
+      ['ABC-1234','New','Forward','FRR90','JAANPR85CL7100123','4HK1-123456','8,000 kg','Fleet Ops Corp.','PA-2026-0456','First Mile','SOC5 EP','Isuzu','2016','6W-14ft'],
+      ['XYZ-5678','Old','Ranger','FTR','JAANPS85CL7100456','6HK1-654321','10,000 kg','Fleet Ops Corp.','PA-2025-0210','Middle Mile','SOC 8','Hino','2020','10W-32ft']
+    ];
+    const content = rows.map(r=>r.join(',')).join('\n');
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'plate_list_template.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('Template downloaded — fill it in (each field in its own column), then upload it back.');
+  });
+  if($('plateBulkFile')) $('plateBulkFile').addEventListener('change', ()=>{
+    const file = $('plateBulkFile').files[0];
+    if(!file) return;
+    $('plateBulkFilename').textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      const ta = $('plateBulkText');
+      const existing = ta.value.trim();
+      const incoming = String(e.target.result||'').trim();
+      ta.value = existing ? existing + '\n' + incoming : incoming;
+    };
+    reader.onerror = ()=>toast('Could not read file.');
+    reader.readAsText(file);
+  });
+  if($('plateBulkImportBtn')) $('plateBulkImportBtn').addEventListener('click', async ()=>{
+    if(!isAdmin()){ toast('Sign in as an Admin to manage the plate list.'); return; }
+    const raw = $('plateBulkText').value.trim();
+    if(!raw){ toast('Nothing to import.'); return; }
+    const lines = raw.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+    let added = 0, skipped = 0;
+    lines.forEach((line, idx)=>{
+      const parts = splitPlateLine(line);
+      // Skip the template's own header row if it was uploaded/pasted as-is.
+      if(idx===0 && /^plate/i.test((parts[0]||'').replace(/[^a-z]/gi,''))) return;
+      const plate = normalizePlate(parts[0]);
+      if(!plate){ skipped++; return; }
+      if(plateNumbers.some(p=>p.plate===plate)){ skipped++; return; }
+      plateNumbers.push({
+        plate,
+        ageClass: parts[1]||'',
+        vehicleModel1: parts[2]||'',
+        vehicleModel2: parts[3]||'',
+        chassisNo: parts[4]||'',
+        engineNo: parts[5]||'',
+        grossWeight: parts[6]||'',
+        registeredOwner: parts[7]||'',
+        provisionalAuthority: parts[8]||'',
+        designation: parts[9]||'',
+        parkingActual: parts[10]||'',
+        make: parts[11]||'',
+        yearModel: parts[12]||'',
+        truckType: parts[13]||''
+      });
+      added++;
+    });
+    await savePlateNumbers();
+    renderPlateList();
+    renderWorkDashboard();
+    $('plateBulkText').value=''; $('plateBulkFilename').textContent='';
+    $('plateBulkSummary').textContent = `Imported ${added}, skipped ${skipped} (of ${lines.length}).`;
+    toast(`Added ${added} truck${added===1?'':'s'} to the list${skipped?`, skipped ${skipped} duplicate${skipped===1?'':'s'}`:''}.`);
+  });
+
+  // ---------- Init ----------
+  async function init(){
+    const authed = await getSessionAuthed();
+
+    users = await getJSON('fleet_users', []);
+    currentUserId = await loadCurrentUserId();
+    if(currentUserId && !users.some(u=>u.id===currentUserId)) currentUserId = null;
+    if(authed){ await signInAsAdminIfNeeded(); unlockApp(); } else { lockApp(); }
+
+    renderSignedInBar();
+    renderUserList();
+
+    customOptions = await getJSON('fleet_dropdown_options', { mechanics:[], make:[], parkingActual:[], yearModel:[], truckType:[], status:[], requestor:[], agency:[] });
+    if(!customOptions.requestor) customOptions.requestor = [];
+    if(!customOptions.agency) customOptions.agency = [];
+    customRequestTypes = await getJSON('fleet_request_types', []);
+    refreshAllDropdowns();
+    fillRequestTypeSelect();
+    renderRosterGrid();
+    plateNumbers = (await getJSON('fleet_plate_numbers', [])).map(migratePlateRecord);
+    renderPlateList();
+    entries = await getJSON('fleet_entries', []);
+    populateFilterOptions();
+    renderTable();
+    renderAckList();
+    renderCompleteList();
+    renderWorkDashboard();
+    refreshWOPreview();
+    applyAccessControl();
+  }
+  init();
+})();
+</script>
+</body>
+</html>
