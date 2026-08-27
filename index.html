@@ -1061,6 +1061,22 @@
         </div>
       </div>
 
+      <div class="section-label">Request Details</div>
+      <div class="form-grid">
+        <div class="field">
+          <label for="f-mobile">Mobile Number</label>
+          <input type="text" id="f-mobile" placeholder="e.g. 9171234567" inputmode="numeric" maxlength="10">
+        </div>
+        <div class="field">
+          <label for="f-location">Location (Rescue)</label>
+          <input type="text" id="f-location" placeholder="Address, or lat/long">
+        </div>
+        <div class="field full">
+          <label for="f-reason">Reason</label>
+          <textarea id="f-reason" placeholder="Describe the issue or activity..."></textarea>
+        </div>
+      </div>
+
       <div class="section-label">Downtime & Ageing</div>
       <div class="form-grid">
         <div class="field">
@@ -1725,13 +1741,13 @@
     return null;
   }
 
-  // DL Running % formula: (Total Plate Number − trucks with an open/ongoing
-  // work order) / Total Plate Number. A ledger entry counts as "open" here
-  // if it's still awaiting acknowledgement, or its dashboard bucket is
-  // Ongoing or Impounded (i.e. not yet Completed or Total Loss).
+  // DL Running % formula: (Plate List Total Trucks − (Ongoing + Impounded +
+  // Total Loss)) / Plate List Total Trucks. A ledger entry counts against
+  // the truck's "running" status when its dashboard bucket is Ongoing,
+  // Impounded, or Total Loss.
   function hasOpenWO(e){
     const b = dashboardBucket(e);
-    return !e.acknowledged || b==='Ongoing' || b==='Impounded';
+    return b==='Ongoing' || b==='Impounded' || b==='Total Loss';
   }
 
   function updateStats(){
@@ -1918,7 +1934,7 @@
   // ---------- Drawer / form ----------
   function clearForm(){
     ['workOrderNo','plateNo','ageClass','designation','agency','parkingActual','make','yearModel','truckType','breakdownDate','completedDate',
-     'category1','category2','category3','trail1','trail2','trail3'].forEach(k=>{ $('f-'+k).value=''; });
+     'category1','category2','category3','trail1','trail2','trail3','mobile','location','reason'].forEach(k=>{ $('f-'+k).value=''; });
     Array.from($('f-mechanics').options).forEach(o=>{ o.selected = false; });
     $('f-latestStatusDisplay').value = '';
     $('f-status').value = 'Ongoing';
@@ -2011,6 +2027,9 @@
       trail1: $('f-trail1').value.trim(),
       trail2: $('f-trail2').value.trim(),
       trail3: $('f-trail3').value.trim(),
+      mobile: $('f-mobile').value.trim(),
+      location: $('f-location').value.trim(),
+      reason: $('f-reason').value.trim(),
       status: $('f-status').value
     };
     data.latestStatus = computeLatestStatus(data);
@@ -2204,6 +2223,9 @@
       trail1: '',
       trail2: '',
       trail3: '',
+      mobile: mobile,
+      location: locationStr,
+      reason: reason,
       latestStatus: '',
       status: 'Ongoing',
       acknowledged: false,
@@ -2317,6 +2339,7 @@
             <span class="pill forack">For Acknowledgement</span>
           </div>
           <div class="ack-meta">${e.designation||'—'} &nbsp;&middot;&nbsp; ${e.truckType||'—'} &nbsp;&middot;&nbsp; Reported ${fmtDate(e.breakdownDate)} &nbsp;&middot;&nbsp; ${info.days===null?'—':info.days+' day'+(info.days===1?'':'s')+' old'}</div>
+          ${e.reason?`<div class="ack-status">${e.reason}</div>`:''}
           ${e.latestStatus?`<div class="ack-status">${e.latestStatus}</div>`:''}
         </div>
         <div class="ack-actions">
@@ -2375,6 +2398,7 @@
             <span class="pill completed">Completed</span>
           </div>
           <div class="ack-meta">${e.designation||'—'} &nbsp;&middot;&nbsp; ${e.truckType||'—'} &nbsp;&middot;&nbsp; Closed ${fmtDate(e.completedDate)} &nbsp;&middot;&nbsp; ${info.days===null?'—':info.days+' day'+(info.days===1?'':'s')+' total'}</div>
+          ${e.reason?`<div class="ack-status">${e.reason}</div>`:''}
           ${e.latestStatus?`<div class="ack-status">${e.latestStatus}</div>`:''}
         </div>
         <div class="ack-actions">
@@ -2432,7 +2456,7 @@
     // Bucket classification (Ongoing/Completed/Impounded/Total Loss) follows
     // DETAILED_STATUS_BUCKET — see dashboardBucket() — with a fallback to the
     // coarse Status/Category-1 fields for entries predating that mapping.
-    // DL Running % = (Total Plate Number − trucks with an open/ongoing WO) / Total Plate Number.
+    // DL Running % = (Plate List Total Trucks − (Ongoing + Impounded + Total Loss)) / Plate List Total Trucks.
     const totalTrucks = plateNumbers.length;
     const notRunningPlates = new Set(
       entries.filter(hasOpenWO).map(e=>normalizePlate(e.plateNo))
@@ -2522,15 +2546,24 @@
     const sortKeys = (a,b)=> a===UNSET?1 : b===UNSET?-1 : a.localeCompare(b);
     const cardColors = ['var(--teal)','var(--blue)','var(--amber)','var(--violet)','var(--red)'];
 
-    // ---- Total DL Running % = (Total Plate Number − trucks with an open/ongoing WO) / Total Plate Number ----
+    // ---- Total DL Running % = (Plate List Total Trucks − (Ongoing + Impounded + Total Loss)) / Plate List Total Trucks ----
     const totalTrucks = plateNumbers.length;
-    const notRunningPlates = new Set(
-      entries.filter(hasOpenWO).map(e=>normalizePlate(e.plateNo))
-    );
+    const openEntries = entries.filter(hasOpenWO);
+    const notRunningPlates = new Set(openEntries.map(e=>normalizePlate(e.plateNo)));
     const runningCount = plateNumbers.filter(p=>!notRunningPlates.has(p.plate)).length;
     const dlRunningPct = totalTrucks>0 ? Math.round((runningCount/totalTrucks)*100) : 0;
     $('rmStatDLRunning').textContent = dlRunningPct + '%';
-    $('rmStatDLRunningSub').textContent = `${runningCount} of ${totalTrucks} truck${totalTrucks===1?'':'s'} running`;
+
+    // Flags open work orders whose plate # doesn't match any truck in the
+    // Plate Number List — those can't be subtracted from the running count,
+    // so surface them instead of silently leaving DL Running % too high.
+    const registeredPlates = new Set(plateNumbers.map(p=>p.plate));
+    const unmatchedPlateCount = new Set(
+      openEntries.map(e=>normalizePlate(e.plateNo)).filter(p=>p && !registeredPlates.has(p))
+    ).size;
+    $('rmStatDLRunningSub').textContent = `${runningCount} of ${totalTrucks} truck${totalTrucks===1?'':'s'} running` +
+      (unmatchedPlateCount ? ` — ⚠ ${unmatchedPlateCount} open WO plate${unmatchedPlateCount===1?'':'s'} not in registry` : '');
+    $('rmStatDLRunningSub').style.color = unmatchedPlateCount ? 'var(--amber)' : '';
 
     // ---- DL Running % per Assigned Parking ----
     const parkRow = $('rmParkingRow');
