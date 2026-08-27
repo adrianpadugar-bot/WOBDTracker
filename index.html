@@ -1725,6 +1725,15 @@
     return null;
   }
 
+  // DL Running % formula: (Total Plate Number − trucks with an open/ongoing
+  // work order) / Total Plate Number. A ledger entry counts as "open" here
+  // if it's still awaiting acknowledgement, or its dashboard bucket is
+  // Ongoing or Impounded (i.e. not yet Completed or Total Loss).
+  function hasOpenWO(e){
+    const b = dashboardBucket(e);
+    return !e.acknowledged || b==='Ongoing' || b==='Impounded';
+  }
+
   function updateStats(){
     const total = entries.length;
     const ongoing = entries.filter(e=>e.status==='Ongoing');
@@ -2423,9 +2432,10 @@
     // Bucket classification (Ongoing/Completed/Impounded/Total Loss) follows
     // DETAILED_STATUS_BUCKET — see dashboardBucket() — with a fallback to the
     // coarse Status/Category-1 fields for entries predating that mapping.
+    // DL Running % = (Total Plate Number − trucks with an open/ongoing WO) / Total Plate Number.
     const totalTrucks = plateNumbers.length;
     const notRunningPlates = new Set(
-      entries.filter(e=>!e.acknowledged || dashboardBucket(e)==='Ongoing').map(e=>normalizePlate(e.plateNo))
+      entries.filter(hasOpenWO).map(e=>normalizePlate(e.plateNo))
     );
     const impoundedPlates = new Set(
       entries.filter(e=>dashboardBucket(e)==='Impounded').map(e=>normalizePlate(e.plateNo))
@@ -2512,10 +2522,10 @@
     const sortKeys = (a,b)=> a===UNSET?1 : b===UNSET?-1 : a.localeCompare(b);
     const cardColors = ['var(--teal)','var(--blue)','var(--amber)','var(--violet)','var(--red)'];
 
-    // ---- Total DL Running % (same "running" definition as the WFM Dashboard) ----
+    // ---- Total DL Running % = (Total Plate Number − trucks with an open/ongoing WO) / Total Plate Number ----
     const totalTrucks = plateNumbers.length;
     const notRunningPlates = new Set(
-      entries.filter(e=>!e.acknowledged || dashboardBucket(e)==='Ongoing').map(e=>normalizePlate(e.plateNo))
+      entries.filter(hasOpenWO).map(e=>normalizePlate(e.plateNo))
     );
     const runningCount = plateNumbers.filter(p=>!notRunningPlates.has(p.plate)).length;
     const dlRunningPct = totalTrucks>0 ? Math.round((runningCount/totalTrucks)*100) : 0;
