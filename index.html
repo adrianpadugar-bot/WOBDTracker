@@ -423,6 +423,11 @@
           <button type="button" class="btn btn-ghost btn-sm" id="signinAuthCancel">Cancel</button>
         </div>
       </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+        <button type="button" class="btn btn-ghost btn-sm" id="exportBackupBtn" title="Download all data as a backup file">Export Backup</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="importBackupBtn" title="Restore data from a backup file">Import Backup</button>
+        <input type="file" id="importBackupFile" accept="application/json,.json" style="display:none;">
+      </div>
       <div class="clock"><b id="clockTime">--:--</b><br><span id="clockDate">-</span></div>
     </div>
   </div>
@@ -1284,12 +1289,23 @@
     { username: 'adrian', password: 'adrianpadugar' }
   ];
 
+  // ---------- Local persistence (browser localStorage) ----------
+  // Data is saved in the browser itself so it survives refresh / reopening the file,
+  // and also mirrored to window.storage when running inside Claude.
+  const LS_PREFIX = 'rmtracker:';
+  const lsGet = k => { try{ return localStorage.getItem(LS_PREFIX+k); }catch(e){ return null; } };
+  const lsSet = (k,v) => { try{ localStorage.setItem(LS_PREFIX+k, v); return true; }catch(e){ return false; } };
+  const ssGet = k => { try{ return sessionStorage.getItem(LS_PREFIX+k); }catch(e){ return null; } };
+  const ssSet = (k,v) => { try{ sessionStorage.setItem(LS_PREFIX+k, v); }catch(e){} };
+
   async function getSessionAuthed(){
+    if(ssGet('fleet_session_authed') === '1') return true;
     if(!storageOK()) return false;
     try{ const r = await window.storage.get('fleet_session_authed', false); return !!r && r.value === '1'; }
     catch(e){ return false; }
   }
   async function setSessionAuthed(v){
+    ssSet('fleet_session_authed', v ? '1' : '0');
     if(!storageOK()) return;
     try{ await window.storage.set('fleet_session_authed', v ? '1' : '0', false); }
     catch(e){}
@@ -1358,14 +1374,23 @@
   });
 
   async function getJSON(key, fallback){
-    if(!storageOK()) return fallback;
-    try{ const r = await window.storage.get(key, true); return r ? JSON.parse(r.value) : fallback; }
-    catch(e){ return fallback; }
+    let raw = null;
+    if(storageOK()){
+      try{ const r = await window.storage.get(key, true); if(r && r.value != null) raw = r.value; }
+      catch(e){}
+    }
+    if(raw === null) raw = lsGet(key);
+    if(raw === null) return fallback;
+    try{ return JSON.parse(raw); }catch(e){ return fallback; }
   }
   async function setJSON(key, value){
-    if(!storageOK()) return false;
-    try{ await window.storage.set(key, JSON.stringify(value), true); return true; }
-    catch(e){ console.error('storage set failed', e); return false; }
+    const str = JSON.stringify(value);
+    let ok = lsSet(key, str);
+    if(storageOK()){
+      try{ await window.storage.set(key, str, true); ok = true; }
+      catch(e){ console.error('storage set failed', e); }
+    }
+    return ok;
   }
 
   let entries = [];
@@ -1397,14 +1422,17 @@
 
   // current signed-in user is per-browser (not shared), like a lightweight local session
   async function saveCurrentUserId(){
+    lsSet('fleet_current_user_id', currentUserId || '');
     if(!storageOK()) return;
     try{ await window.storage.set('fleet_current_user_id', currentUserId || '', false); }
     catch(e){}
   }
   async function loadCurrentUserId(){
-    if(!storageOK()) return null;
-    try{ const r = await window.storage.get('fleet_current_user_id', false); return r ? r.value : null; }
-    catch(e){ return null; }
+    if(storageOK()){
+      try{ const r = await window.storage.get('fleet_current_user_id', false); if(r && r.value) return r.value; }
+      catch(e){}
+    }
+    return lsGet('fleet_current_user_id') || null;
   }
 
   function renderSignedInBar(){
@@ -3556,6 +3584,37 @@
     $('plateBulkText').value=''; $('plateBulkFilename').textContent='';
     $('plateBulkSummary').textContent = `Imported ${added}, skipped ${skipped} (of ${lines.length}).`;
     toast(`Added ${added} truck${added===1?'':'s'} to the list${skipped?`, skipped ${skipped} duplicate${skipped===1?'':'s'}`:''}.`);
+  });
+
+  // ---------- Backup / Restore ----------
+  const BACKUP_KEYS = ['fleet_users','fleet_dropdown_options','fleet_request_types','fleet_plate_numbers','fleet_entries'];
+  if($('exportBackupBtn')) $('exportBackupBtn').addEventListener('click', async ()=>{
+    const data = {};
+    for(const k of BACKUP_KEYS){ data[k] = await getJSON(k, null); }
+    const payload = { app:'rm-repair-monitoring-tracker', version:1, exportedAt:new Date().toISOString(), data };
+    const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'rm-tracker-backup-' + new Date().toISOString().slice(0,10) + '.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+  });
+  if($('importBackupBtn')) $('importBackupBtn').addEventListener('click', ()=> $('importBackupFile').click());
+  if($('importBackupFile')) $('importBackupFile').addEventListener('change', async (ev)=>{
+    const f = ev.target.files && ev.target.files[0];
+    ev.target.value = '';
+    if(!f) return;
+    try{
+      const parsed = JSON.parse(await f.text());
+      const data = parsed && parsed.data;
+      if(!data || typeof data !== 'object') throw new Error('Not a valid backup file.');
+      if(!confirm('Restore this backup? It will REPLACE the current data in this browser.')) return;
+      for(const k of BACKUP_KEYS){ if(data[k] !== undefined && data[k] !== null) await setJSON(k, data[k]); }
+      await init();
+      alert('Backup restored.');
+    }catch(e){
+      alert('Could not import backup: ' + e.message);
+    }
   });
 
   // ---------- Init ----------
