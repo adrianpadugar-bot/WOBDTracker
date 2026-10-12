@@ -470,6 +470,7 @@
           <select id="wo-parking">
             <option value="">Select parking</option>
           </select>
+          <span class="calc-hint" id="wo-parkingHint">Auto-selected from the Plate Number List.</span>
         </div>
         <div class="field">
           <label for="wo-agency">Agency<span class="req-mark">*</span></label>
@@ -2221,6 +2222,36 @@
     woPlateInput.setSelectionRange(newPos,newPos);
   });
 
+  // Auto-select Parking based on the Plate Number List registry.
+  let woParkingAutoFilled = false;
+  function autoSelectWOParking(){
+    const plateEl = $('wo-plate'), parkEl = $('wo-parking'), hint = $('wo-parkingHint');
+    if(!plateEl || !parkEl) return;
+    const plate = normalizePlate(plateEl.value);
+    const rec = plate ? plateNumbers.find(p=>p.plate===plate) : null;
+    if(rec && rec.parkingActual){
+      // Make sure the registry's parking exists as an option, then select it.
+      if(!Array.from(parkEl.options).some(o=>o.value===rec.parkingActual)){
+        const opt = document.createElement('option');
+        opt.textContent = rec.parkingActual;
+        parkEl.appendChild(opt);
+      }
+      parkEl.value = rec.parkingActual;
+      woParkingAutoFilled = true;
+      if(hint) hint.textContent = 'Auto-selected from the Plate Number List.';
+    } else {
+      if(woParkingAutoFilled){ parkEl.value = ''; woParkingAutoFilled = false; }
+      if(hint) hint.textContent = (rec && !rec.parkingActual)
+        ? 'No parking assigned to this plate in the Plate Number List — select manually.'
+        : 'Auto-selected from the Plate Number List.';
+    }
+  }
+  if(woPlateInput){
+    woPlateInput.addEventListener('input', autoSelectWOParking);
+    woPlateInput.addEventListener('change', autoSelectWOParking);
+  }
+  if($('wo-parking')) $('wo-parking').addEventListener('change', ()=>{ woParkingAutoFilled = false; });
+
   function capitalizeFirst(el){
     if(!el) return;
     el.addEventListener('input', ()=>{
@@ -2278,6 +2309,8 @@
 
   function resetWOForm(){
     $('woForm').reset();
+    woParkingAutoFilled = false;
+    if($('wo-parkingHint')) $('wo-parkingHint').textContent = 'Auto-selected from the Plate Number List.';
     updateRequestorField();
     $('wo-locationBlock').classList.remove('show');
     $('wo-locAddressField').style.display='block';
