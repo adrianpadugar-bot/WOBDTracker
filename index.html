@@ -29,9 +29,13 @@
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
+    /* Tri-color background: Dark Blue / Orange / White */
     background:
-      radial-gradient(1100px 500px at 85% -10%, #1a2130 0%, transparent 55%),
-      var(--bg);
+      linear-gradient(135deg,
+        #0a1f44 0%, #0a1f44 62%,
+        #ff7a1a 62%, #ff7a1a 82%,
+        #ffffff 82%, #ffffff 100%) fixed,
+      #0a1f44;
     color:var(--text-dim);
     font-family:'Inter',sans-serif;
     min-height:100vh;
@@ -144,7 +148,7 @@
   .empty-row td{padding:40px 12px;text-align:center;color:var(--text-mute);font-size:13px;}
 
   /* ---------- WFM Dashboard (kanban) ---------- */
-  .wd-board{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-items:start;}
+  .wd-board{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;align-items:start;}
   @media (max-width:900px){.wd-board{grid-template-columns:1fr;}}
   .wd-column{background:var(--bg-2);border:1px solid var(--line);border-radius:var(--radius);display:flex;flex-direction:column;max-height:calc(100vh - 340px);min-height:220px;}
   .wd-column-head{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);flex-shrink:0;}
@@ -235,6 +239,32 @@
   .stat-row-auto{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:10px;}
   .stat-row-auto .stat-card{padding:12px 14px;}
   .stat-row-auto .stat-num{font-size:20px;}
+  .toolbar input[type="date"]{background:var(--panel);border:1px solid var(--line);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;padding:8px 11px;border-radius:var(--radius);color-scheme:dark;}
+  .toolbar .tb-label{font-size:11.5px;color:var(--text-mute);letter-spacing:.03em;}
+  .rep-cols{display:flex;align-items:flex-end;gap:6px;height:170px;padding:8px 4px 0;overflow-x:auto;}
+  .rep-col{flex:1;min-width:26px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;}
+  .rep-col-bars{display:flex;align-items:flex-end;gap:2px;height:calc(100% - 18px);width:100%;justify-content:center;}
+  .rep-bar{width:11px;border-radius:3px 3px 0 0;position:relative;min-height:0;}
+  .rep-bar.bd{background:var(--red);}
+  .rep-bar.rp{background:var(--teal);}
+  .rep-bar span{position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--text-dim);}
+  .rep-col-lbl{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--text-mute);margin-top:4px;height:14px;white-space:nowrap;}
+  .rep-legend{display:flex;gap:14px;font-size:11.5px;color:var(--text-dim);margin:8px 0 14px;}
+  .rep-legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px;}
+  .delta-up{color:var(--red);font-weight:600;}
+  .delta-down{color:var(--teal);font-weight:600;}
+  .delta-flat{color:var(--text-mute);}
+  tr.rep-total td{font-weight:700;border-top:1px solid var(--line);}
+  .bar-chart-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;}
+  .bar-chart{background:var(--bg-2);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;}
+  .bar-chart h4{font-family:'Space Grotesk',sans-serif;font-size:12.5px;letter-spacing:.03em;color:var(--text);margin:0 0 10px;display:flex;justify-content:space-between;gap:8px;}
+  .bar-chart h4 span{color:var(--text-mute);font-weight:400;}
+  .bar-row{display:grid;grid-template-columns:minmax(90px,38%) 1fr 28px;align-items:center;gap:8px;margin-bottom:6px;font-size:11.5px;}
+  .bar-label{color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .bar-track{background:var(--panel);border-radius:4px;height:14px;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:4px;min-width:0;}
+  .bar-val{font-family:'IBM Plex Mono',monospace;color:var(--text);text-align:right;}
+  .bar-empty{color:var(--text-mute);font-size:12px;padding:10px 0;}
   .stat-block{margin-bottom:20px;}
   .stat-block:last-child{margin-bottom:0;}
   .stat-sub{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--text-mute);margin-top:3px;}
@@ -405,8 +435,9 @@
     <button type="button" class="module-nav-btn" data-module="monitor">Repair Monitoring</button>
     <button type="button" class="module-nav-btn" data-module="acknowledge">Work Order To Acknowledge <span class="nav-badge" id="ackNavBadge">0</span></button>
     <button type="button" class="module-nav-btn" data-module="complete">Complete <span class="nav-badge" id="completeNavBadge">0</span></button>
+    <button type="button" class="module-nav-btn" data-module="reports">Reports</button>
     <button type="button" class="module-nav-btn" data-module="roster">Roster</button>
-    <button type="button" class="module-nav-btn" data-module="plates">Plate Number List</button>
+    <button type="button" class="module-nav-btn" data-module="plates" id="platesNavBtn">Plate Number List</button>
     <button type="button" class="module-nav-btn" data-module="users">Users &amp; Access</button>
   </div>
 
@@ -499,11 +530,11 @@
       <div>
         <p class="eyebrow">Live Overview</p>
         <h1 style="font-size:20px;">WFM Dashboard</h1>
-        <p class="sub">Every work order at a glance, plus fleet-wide health — waiting on acknowledgement, currently ongoing, or completed.</p>
+        <p class="sub">Every work order at a glance, plus fleet-wide health — waiting on acknowledgement or currently ongoing.</p>
       </div>
     </div>
 
-    <div class="stat-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:10px;">
+    <div class="stat-row" style="grid-template-columns:repeat(2,1fr);margin-bottom:10px;">
       <div class="stat-card" style="--stat-color:var(--amber);">
         <div class="stat-num" id="dashStatAck">0</div>
         <div class="stat-label">To Acknowledge</div>
@@ -511,10 +542,6 @@
       <div class="stat-card" style="--stat-color:var(--blue);">
         <div class="stat-num" id="dashStatOngoing">0</div>
         <div class="stat-label">Ongoing</div>
-      </div>
-      <div class="stat-card" style="--stat-color:var(--teal);">
-        <div class="stat-num" id="dashStatComplete">0</div>
-        <div class="stat-label">Completed</div>
       </div>
     </div>
 
@@ -563,14 +590,6 @@
         </div>
         <div class="wd-col-body" id="dashOngoingColumn"></div>
       </div>
-      <div class="wd-column">
-        <div class="wd-column-head">
-          <span class="wd-col-dot" style="background:var(--teal);"></span>
-          <span class="wd-col-title">Completed</span>
-          <span class="nav-badge" id="dashCompleteCount">0</span>
-        </div>
-        <div class="wd-col-body" id="dashCompleteColumn"></div>
-      </div>
     </div>
   </section>
 
@@ -598,8 +617,18 @@
       </div>
 
       <div class="stat-block">
+        <p class="summary-subhead">Open WO per Assigned Parking Actual</p>
+        <div class="stat-row-auto" id="rmOpenParkingRow"></div>
+      </div>
+
+      <div class="stat-block">
         <p class="summary-subhead">Open WO per Designation</p>
         <div class="stat-row-auto" id="rmDesigRow"></div>
+      </div>
+
+      <div class="stat-block">
+        <p class="summary-subhead">Open WO Breakdown (Ongoing + Impounded)</p>
+        <div class="bar-chart-grid" id="rmBarCharts"></div>
       </div>
 
       <div class="stat-block">
@@ -700,11 +729,12 @@
           <th>Status Trail-3</th>
           <th>Latest Detailed Status</th>
           <th class="sortable" data-sort="status">Status</th>
+          <th class="sortable" data-sort="acknowledgedBy">Acknowledged By</th>
           <th>Action</th>
         </tr>
       </thead>
       <tbody id="tableBody">
-        <tr class="empty-row"><td colspan="26">No entries yet. Click "+ Add Entry" to log the first unit.</td></tr>
+        <tr class="empty-row"><td colspan="27">No entries yet. Click "+ Add Entry" to log the first unit.</td></tr>
       </tbody>
     </table>
   </div>
@@ -737,6 +767,67 @@
     </div>
   </section>
 
+  <section class="module" id="module-reports">
+    <div class="masthead" style="margin-bottom:18px;">
+      <div>
+        <p class="eyebrow">Analytics</p>
+        <h1 style="font-size:20px;">Reports</h1>
+        <p class="sub">Breakdown intake vs. completed repairs, and breakdown frequency per Breakdown Category-3. Based on acknowledged work orders (the same ones shown in Repair Monitoring).</p>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <span class="tb-label">Report date</span>
+      <input type="date" id="repDate">
+      <span class="tb-label">Daily window</span>
+      <select id="repDays">
+        <option value="7">Last 7 days</option>
+        <option value="14" selected>Last 14 days</option>
+        <option value="30">Last 30 days</option>
+      </select>
+    </div>
+
+    <div class="roster-card" style="margin-bottom:16px;">
+      <h3>1. Daily Ingestion of Breakdown vs Total Repair Count</h3>
+      <p class="roster-hint">Breakdowns = work orders by Breakdown Date. Repairs = Completed work orders by Completed Date. Net = Breakdowns − Repairs (positive means the backlog grew that day).</p>
+      <div class="stat-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:6px;">
+        <div class="stat-card" style="--stat-color:var(--red);"><div class="stat-num" id="rep1Breakdowns">0</div><div class="stat-label">Breakdowns (window)</div></div>
+        <div class="stat-card" style="--stat-color:var(--teal);"><div class="stat-num" id="rep1Repairs">0</div><div class="stat-label">Repairs completed (window)</div></div>
+        <div class="stat-card" style="--stat-color:var(--amber);"><div class="stat-num" id="rep1Net">0</div><div class="stat-label">Net (window)</div></div>
+      </div>
+      <div class="rep-legend"><span><i style="background:var(--red);"></i>Breakdown</span><span><i style="background:var(--teal);"></i>Repair</span></div>
+      <div class="rep-cols" id="rep1Chart"></div>
+      <div class="table-scroll" style="margin-top:14px;">
+        <table>
+          <thead><tr><th>Date</th><th>Breakdowns</th><th>Repairs Completed</th><th>Net</th></tr></thead>
+          <tbody id="rep1Body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="roster-card" style="margin-bottom:16px;">
+      <h3>2a. Daily Comparison — Breakdown Frequency per Category-3</h3>
+      <p class="roster-hint" id="rep2DailyHint"></p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Breakdown Category-3</th><th id="rep2DPrevHead">Previous Day</th><th id="rep2DCurHead">Selected Day</th><th>Change</th></tr></thead>
+          <tbody id="rep2DailyBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="roster-card">
+      <h3>2b. Weekly Comparison — Breakdown Frequency per Category-3</h3>
+      <p class="roster-hint" id="rep2WeeklyHint"></p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Breakdown Category-3</th><th id="rep2WPrevHead">Last Week</th><th id="rep2WCurHead">This Week</th><th>Change</th></tr></thead>
+          <tbody id="rep2WeeklyBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
   <section class="module" id="module-roster">
     <div class="masthead" style="margin-bottom:18px;">
       <div>
@@ -753,7 +844,7 @@
     <div class="masthead" style="margin-bottom:18px;">
       <div>
         <p class="eyebrow">Fleet Reference</p>
-        <h1 style="font-size:20px;">Plate Number List</h1>
+        <h1 style="font-size:20px;" id="platesModuleTitle">Plate Number List</h1>
         <p class="sub">The master fleet registry — plate number, age class, vehicle model, chassis #, engine #, gross weight, registered owner, provisional authority, designation, assigned parking, make, year model, and truck type. Add one at a time or bulk upload a list. Plate numbers suggest automatically when creating or editing a work order.</p>
       </div>
     </div>
@@ -820,6 +911,7 @@
         </table>
       </div>
 
+      <div id="plateAddArea">
       <div class="form-grid" style="margin-bottom:12px;">
         <div class="field">
           <label for="plateAddPlate">Plate #</label>
@@ -903,6 +995,7 @@
           <button type="button" class="btn btn-primary btn-sm" id="plateBulkImportBtn">Import all</button>
         </div>
       </div>
+      </div>
     </div>
   </section>
 
@@ -923,8 +1016,8 @@
     <div id="usersManageArea">
       <div class="role-legend">
         <span><span class="role-badge admin">Admin</span> <b>Full access</b> — manage Users &amp; Roster, create/edit/delete work orders, bulk import.</span>
-        <span><span class="role-badge dispatcher">Dispatcher</span> <b>Limited</b> — Create Work Order, WFM Dashboard (view only), and view Plate Number List only.</span>
-        <span><span class="role-badge wfm-fte">WFM FTE</span> <b>Limited</b> — Create Work Order, WFM Dashboard (view only), and view Plate Number List only.</span>
+        <span><span class="role-badge dispatcher">Dispatcher</span> <b>Limited</b> — Create Work Order, WFM Dashboard (view only), Complete (view only), and view DL Running Performance (Plate Number List) only.</span>
+        <span><span class="role-badge wfm-fte">WFM FTE</span> <b>Limited</b> — Create Work Order, WFM Dashboard (view only), Complete (view only), and view DL Running Performance (Plate Number List) only.</span>
         <span><span class="role-badge rm-fte">R&amp;M FTE</span> <b>Operate</b> — create/edit/delete work orders, bulk import, acknowledge/complete. No access to WFM Dashboard.</span>
         <span><span class="role-badge viewer">Viewer</span> <b>Read-only</b> — can view every module, no edits.</span>
       </div>
@@ -1327,7 +1420,7 @@
 
   // Roles limited to a reduced nav — they can only view/use these modules.
   const NAV_RESTRICTED_ROLES = ['dispatcher', 'wfm-fte'];
-  const RESTRICTED_ALLOWED_MODULES = ['create', 'dashboard', 'plates'];
+  const RESTRICTED_ALLOWED_MODULES = ['create', 'dashboard', 'plates', 'complete'];
   // R&M FTE must not see the WFM Dashboard at all (not even view-only).
   const DASHBOARD_BLOCKED_ROLES = ['rm-fte'];
 
@@ -1353,7 +1446,7 @@
     $('usersGateNotice').style.display = usersOpen ? 'none' : '';
     $('usersManageArea').style.display = usersOpen ? '' : 'none';
 
-    // Nav restriction: Dispatcher & WFM FTE only see Create Work Order + WFM Dashboard + Plate Number List.
+    // Nav restriction: Dispatcher & WFM FTE only see Create Work Order + WFM Dashboard + Plate Number List + Complete (view only).
     // R&M FTE sees everything else but is blocked from the WFM Dashboard specifically.
     const cu = getCurrentUser();
     const restrictNav = !!(cu && NAV_RESTRICTED_ROLES.includes(cu.role));
@@ -1366,6 +1459,15 @@
       if(!allowed && btn.classList.contains('active')) activeHiddenModule = true;
     });
     if(activeHiddenModule) switchModule(dashboardBlocked ? 'monitor' : 'create');
+
+    // Dispatcher & WFM FTE see the Plate Number List module as "DL Running Performance".
+    const platesLabel = restrictNav ? 'DL Running Performance' : 'Plate Number List';
+    $('platesNavBtn').textContent = platesLabel;
+    $('platesModuleTitle').textContent = platesLabel;
+    // Dispatcher & WFM FTE don't see the Add Truck form or bulk upload at all.
+    $('plateAddArea').style.display = restrictNav ? 'none' : '';
+    // Complete module: Dispatcher & WFM FTE get view-only cards (no Reopen / no editing).
+    if(typeof renderCompleteList==='function') renderCompleteList();
   }
 
   function renderUserList(){
@@ -1750,12 +1852,16 @@
     return b==='Ongoing' || b==='Impounded' || b==='Total Loss';
   }
 
+  // Repair Monitoring only shows work orders that were acknowledged in "Work Order To Acknowledge".
+  function monitorEntries(){ return entries.filter(e=>e.acknowledged); }
+
   function updateStats(){
-    const total = entries.length;
-    const ongoing = entries.filter(e=>e.status==='Ongoing');
-    const completed = entries.filter(e=>e.status==='Completed').length;
-    const onHold = entries.filter(e=>e.status==='On Hold'||e.status==='Cancelled').length;
-    const criticalCount = entries.filter(e=>{
+    const mEntries = monitorEntries();
+    const total = mEntries.length;
+    const ongoing = mEntries.filter(e=>e.status==='Ongoing');
+    const completed = mEntries.filter(e=>e.status==='Completed').length;
+    const onHold = mEntries.filter(e=>e.status==='On Hold'||e.status==='Cancelled').length;
+    const criticalCount = mEntries.filter(e=>{
       const info = computeAgeing(e);
       return info.days!==null && info.days>=151 && e.status==='Ongoing';
     }).length;
@@ -1810,7 +1916,7 @@
     const ageMapF = $('filterAgeMap').value;
     const typeF = $('filterTruckType').value;
 
-    let filtered = entries.filter(e=>{
+    let filtered = monitorEntries().filter(e=>{
       if(statusF && e.status!==statusF) return false;
       if(typeF && e.truckType!==typeF) return false;
       if(ageMapF){
@@ -1818,7 +1924,7 @@
         if(!info.bucket || info.bucket.label!==ageMapF) return false;
       }
       if(q){
-        const hay = [e.workOrderNo,e.plateNo,e.requestor,e.driverName,e.odometer,e.designation,e.agency,e.parkingActual,e.make,e.truckType,e.mechanics,e.category1,e.category2,e.category3,e.latestStatus].join(' ').toLowerCase();
+        const hay = [e.workOrderNo,e.plateNo,e.requestor,e.driverName,e.odometer,e.designation,e.agency,e.parkingActual,e.make,e.truckType,e.mechanics,e.category1,e.category2,e.category3,e.latestStatus,e.acknowledgedBy].join(' ').toLowerCase();
         if(!hay.includes(q)) return false;
       }
       return true;
@@ -1829,7 +1935,7 @@
     const tbody = $('tableBody');
     tbody.innerHTML = '';
     if(filtered.length===0){
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="26">No entries match your filters.</td></tr>`;
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="27">No entries match your filters.</td></tr>`;
       updateStats();
       return;
     }
@@ -1872,6 +1978,7 @@
         <td>${e.trail3||'—'}</td>
         <td style="white-space:normal;max-width:220px;">${e.latestStatus||'—'}</td>
         <td><span class="pill ${statusClass(e.status)}">${e.status||'—'}</span></td>
+        <td>${e.acknowledgedBy||'—'}${e.acknowledgedAt?`<div style="font-size:10.5px;color:var(--text-mute);">${fmtDate(e.acknowledgedAt.slice(0,10))}</div>`:''}</td>
         <td>${(e.status==='Completed'||e.status==='Total Loss')
               ? `<span class="pill ${e.status==='Total Loss'?'totalloss':'completed'}">${e.status==='Total Loss'?'Total Loss':'Done'}</span>`
               : `<button type="button" class="btn btn-primary btn-sm" data-complete-btn="${e.id}">Completed / Check</button>`}
@@ -1988,7 +2095,7 @@
     document.querySelectorAll('#entryForm input, #entryForm select, #entryForm textarea').forEach(el=>{ el.disabled = !editable; });
     $('saveEntryBtn').style.display = editable ? '' : 'none';
     if(!editable){ $('deleteEntryBtn').style.display = 'none'; }
-    if(!editable){ $('drawerSub').textContent += forceReadOnly ? ' (Read-only — acknowledge first to unlock editing.)' : ' (Read-only — you are viewing, not editing.)'; }
+    if(!editable){ $('drawerSub').textContent += forceReadOnly==='role' ? ' (View only — your role cannot edit this entry.)' : forceReadOnly ? ' (Read-only — acknowledge first to unlock editing.)' : ' (Read-only — you are viewing, not editing.)'; }
     $('overlay').classList.add('show');
   }
   function closeDrawer(){ $('overlay').classList.remove('show'); editingId=null; }
@@ -2308,6 +2415,7 @@
     // while this module was in the background.
     if(name==='dashboard') renderWorkDashboard();
     if(name==='rmdashboard') renderRMDashboard();
+    if(name==='reports') renderReports();
   }
   document.querySelectorAll('.module-nav-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>switchModule(btn.dataset.module));
@@ -2326,28 +2434,58 @@
       list.innerHTML = '<div class="empty-ack">No work orders pending acknowledgement.</div>';
       return;
     }
-    const sorted = [...pending].sort((a,b)=> new Date(a.breakdownDate) - new Date(b.breakdownDate));
-    sorted.forEach(e=>{
-      const info = computeAgeing(e);
-      const card = document.createElement('div');
-      card.className = 'ack-card';
-      card.innerHTML = `
-        <div class="ack-main">
-          <div class="ack-top">
-            <span class="ack-wo">${e.workOrderNo||'No WO#'}</span>
-            <span class="ack-plate">${e.plateNo||'No plate'}</span>
-            <span class="pill forack">For Acknowledgement</span>
-          </div>
-          <div class="ack-meta">${e.designation||'—'} &nbsp;&middot;&nbsp; ${e.truckType||'—'} &nbsp;&middot;&nbsp; Reported ${fmtDate(e.breakdownDate)} &nbsp;&middot;&nbsp; ${info.days===null?'—':info.days+' day'+(info.days===1?'':'s')+' old'}</div>
-          ${e.reason?`<div class="ack-status">${e.reason}</div>`:''}
-          ${e.latestStatus?`<div class="ack-status">${e.latestStatus}</div>`:''}
-        </div>
-        <div class="ack-actions">
-          <button type="button" class="btn btn-ghost btn-sm" data-ack-view="${e.id}">View</button>
-          <button type="button" class="btn btn-primary btn-sm" data-ack-confirm="${e.id}">Acknowledge</button>
-        </div>
-      `;
-      list.appendChild(card);
+    // One table per Assigned Parking Actual (unspecified parking goes last).
+    const UNSET_PARK = '(No Parking Assigned)';
+    const groups = {};
+    pending.forEach(e=>{
+      const key = (e.parkingActual||'').trim() || UNSET_PARK;
+      (groups[key] = groups[key] || []).push(e);
+    });
+    const parkKeys = Object.keys(groups).sort((a,b)=> a===UNSET_PARK?1 : b===UNSET_PARK?-1 : a.localeCompare(b));
+    parkKeys.forEach(park=>{
+      const rows = groups[park].sort((a,b)=> new Date(a.breakdownDate) - new Date(b.breakdownDate));
+      const wrap = document.createElement('div');
+      wrap.className = 'roster-card';
+      wrap.style.marginBottom = '16px';
+      wrap.innerHTML = `
+        <h3>${park} <span class="nav-badge">${rows.length}</span></h3>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>WO #</th>
+                <th>Plate #</th>
+                <th>Designation</th>
+                <th>Truck Type</th>
+                <th>Reported</th>
+                <th>Age</th>
+                <th>Reason / Latest Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map(e=>{
+                const info = computeAgeing(e);
+                return `<tr>
+                  <td class="mono strong">${e.workOrderNo||'No WO#'}</td>
+                  <td class="mono">${e.plateNo||'No plate'}</td>
+                  <td>${e.designation||'—'}</td>
+                  <td>${e.truckType||'—'}</td>
+                  <td class="mono">${fmtDate(e.breakdownDate)}</td>
+                  <td class="mono">${info.days===null?'—':info.days+'d'}</td>
+                  <td>${[e.reason, e.latestStatus].filter(Boolean).join(' — ') || '—'}</td>
+                  <td>
+                    <div class="ack-actions">
+                      <button type="button" class="btn btn-ghost btn-sm" data-ack-view="${e.id}">View</button>
+                      <button type="button" class="btn btn-primary btn-sm" data-ack-confirm="${e.id}">Acknowledge</button>
+                    </div>
+                  </td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>`;
+      list.appendChild(wrap);
     });
 
     list.querySelectorAll('[data-ack-view]').forEach(btn=>{
@@ -2386,6 +2524,8 @@
       return;
     }
     const sorted = [...completedEntries].sort((a,b)=> new Date(b.completedDate||b.breakdownDate) - new Date(a.completedDate||a.breakdownDate));
+    const cuC = getCurrentUser();
+    const completeViewOnly = !!(cuC && NAV_RESTRICTED_ROLES.includes(cuC.role));
     sorted.forEach(e=>{
       const info = computeAgeing(e);
       const card = document.createElement('div');
@@ -2402,15 +2542,15 @@
           ${e.latestStatus?`<div class="ack-status">${e.latestStatus}</div>`:''}
         </div>
         <div class="ack-actions">
-          <button type="button" class="btn btn-ghost btn-sm" data-complete-view="${e.id}">View / Edit</button>
-          <button type="button" class="btn btn-ghost btn-sm" data-complete-reopen="${e.id}">Reopen</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-complete-view="${e.id}">${completeViewOnly ? 'View' : 'View / Edit'}</button>
+          ${completeViewOnly ? '' : `<button type="button" class="btn btn-ghost btn-sm" data-complete-reopen="${e.id}">Reopen</button>`}
         </div>
       `;
       list.appendChild(card);
     });
 
     list.querySelectorAll('[data-complete-view]').forEach(btn=>{
-      btn.addEventListener('click', ()=>openDrawer(btn.dataset.completeView));
+      btn.addEventListener('click', ()=>openDrawer(btn.dataset.completeView, completeViewOnly ? 'role' : false));
     });
     list.querySelectorAll('[data-complete-reopen]').forEach(btn=>{
       btn.addEventListener('click', ()=>reopenEntry(btn.dataset.completeReopen));
@@ -2442,15 +2582,11 @@
       .sort((a,b)=> new Date(a.breakdownDate) - new Date(b.breakdownDate));
     const ongoing = entries.filter(e=>e.acknowledged && dashboardBucket(e)==='Ongoing').filter(matches)
       .sort((a,b)=> (computeAgeing(b).days??-1) - (computeAgeing(a).days??-1));
-    const complete = entries.filter(e=>dashboardBucket(e)==='Completed').filter(matches)
-      .sort((a,b)=> new Date(b.completedDate||b.breakdownDate) - new Date(a.completedDate||a.breakdownDate));
 
     $('dashStatAck').textContent = toAck.length;
     $('dashStatOngoing').textContent = ongoing.length;
-    $('dashStatComplete').textContent = complete.length;
     $('dashAckCount').textContent = toAck.length;
     $('dashOngoingCount').textContent = ongoing.length;
-    $('dashCompleteCount').textContent = complete.length;
 
     // ---- Fleet-wide health stats (sourced from the Plate Number List registry) ----
     // Bucket classification (Ongoing/Completed/Impounded/Total Loss) follows
@@ -2510,14 +2646,13 @@
     renderColumn('dashAckColumn', toAck, 'Nothing pending acknowledgement.', e=>
       `<button type="button" class="btn btn-ghost btn-sm" data-wd-view-ro="${e.id}">View</button>`, true);
     renderColumn('dashOngoingColumn', ongoing, 'Nothing ongoing right now.', e=>
-      `<button type="button" class="btn btn-ghost btn-sm" data-wd-view-btn="${e.id}">View</button>
-       ${canManageDash ? `<button type="button" class="btn btn-primary btn-sm" data-wd-complete="${e.id}">Mark Complete</button>` : ''}`);
-    renderColumn('dashCompleteColumn', complete, 'Nothing completed yet.', e=>
-      `<button type="button" class="btn btn-ghost btn-sm" data-wd-view-btn="${e.id}">View</button>
-       ${canManageDash ? `<button type="button" class="btn btn-ghost btn-sm" data-wd-reopen="${e.id}">Reopen</button>` : ''}`);
+      `<button type="button" class="btn btn-ghost btn-sm" ${canManageDash ? 'data-wd-view-btn' : 'data-wd-view-role'}="${e.id}">View</button>`, canManageDash ? false : 'role');
 
     document.querySelectorAll('[data-wd-view-btn]').forEach(btn=>{
       btn.addEventListener('click', (ev)=>{ ev.stopPropagation(); openDrawer(btn.dataset.wdViewBtn); });
+    });
+    document.querySelectorAll('[data-wd-view-role]').forEach(btn=>{
+      btn.addEventListener('click', (ev)=>{ ev.stopPropagation(); openDrawer(btn.dataset.wdViewRole, 'role'); });
     });
     document.querySelectorAll('[data-wd-view-ro]').forEach(btn=>{
       btn.addEventListener('click', (ev)=>{ ev.stopPropagation(); openDrawer(btn.dataset.wdViewRo, true); });
@@ -2525,17 +2660,123 @@
     document.querySelectorAll('[data-wd-ack]').forEach(btn=>{
       btn.addEventListener('click', (ev)=>{ ev.stopPropagation(); acknowledgeEntry(btn.dataset.wdAck); });
     });
-    document.querySelectorAll('[data-wd-complete]').forEach(btn=>{
-      btn.addEventListener('click', (ev)=>{ ev.stopPropagation(); markCompleted(btn.dataset.wdComplete); });
-    });
-    document.querySelectorAll('[data-wd-reopen]').forEach(btn=>{
-      btn.addEventListener('click', (ev)=>{ ev.stopPropagation(); reopenEntry(btn.dataset.wdReopen); });
-    });
 
     renderRMDashboard();
+    if(typeof renderReports==='function') renderReports();
   }
   const dashSearchEl = document.getElementById('dashSearchBox');
   if(dashSearchEl) dashSearchEl.addEventListener('input', renderWorkDashboard);
+
+  // ---------- Reports ----------
+  function ymd(d){
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  function addDays(dateStr, n){
+    const d = new Date(dateStr+'T00:00:00');
+    d.setDate(d.getDate()+n);
+    return ymd(d);
+  }
+  function weekStartMon(dateStr){
+    const d = new Date(dateStr+'T00:00:00');
+    const shift = (d.getDay()+6)%7; // Monday = 0
+    d.setDate(d.getDate()-shift);
+    return ymd(d);
+  }
+  function deltaHtml(cur, prev, asPct){
+    const diff = cur - prev;
+    if(diff===0) return '<span class="delta-flat">— 0</span>';
+    const cls = diff>0 ? 'delta-up' : 'delta-down';
+    const arrow = diff>0 ? '▲' : '▼';
+    let txt = (diff>0?'+':'') + diff;
+    if(asPct){ txt += prev>0 ? ` (${diff>0?'+':''}${Math.round((diff/prev)*100)}%)` : ' (new)'; }
+    return `<span class="${cls}">${arrow} ${txt}</span>`;
+  }
+
+  function renderReports(){
+    if(!$('repDate')) return;
+    if(!$('repDate').value) $('repDate').value = ymd(new Date());
+    const refDate = $('repDate').value;
+    const windowDays = parseInt($('repDays').value,10) || 14;
+    const data = monitorEntries();
+
+    // ---- Report 1: Daily Ingestion of Breakdown vs Total Repair Count ----
+    const days = [];
+    for(let i=windowDays-1;i>=0;i--) days.push(addDays(refDate,-i));
+    const bdCount = {}, rpCount = {};
+    data.forEach(e=>{
+      if(e.breakdownDate) bdCount[e.breakdownDate] = (bdCount[e.breakdownDate]||0)+1;
+      if(e.status==='Completed' && e.completedDate) rpCount[e.completedDate] = (rpCount[e.completedDate]||0)+1;
+    });
+    const rows = days.map(d=>({ d, bd:bdCount[d]||0, rp:rpCount[d]||0 }));
+    const totBd = rows.reduce((a,r)=>a+r.bd,0);
+    const totRp = rows.reduce((a,r)=>a+r.rp,0);
+    $('rep1Breakdowns').textContent = totBd;
+    $('rep1Repairs').textContent = totRp;
+    $('rep1Net').textContent = (totBd-totRp>0?'+':'') + (totBd-totRp);
+
+    const maxV = Math.max(1, ...rows.map(r=>Math.max(r.bd,r.rp)));
+    $('rep1Chart').innerHTML = rows.map(r=>{
+      const h = v => v===0 ? 0 : Math.max(3,(v/maxV)*100);
+      const short = r.d.slice(5).replace('-','/');
+      return `<div class="rep-col" title="${fmtDate(r.d)} — Breakdowns: ${r.bd}, Repairs: ${r.rp}">
+        <div class="rep-col-bars">
+          <div class="rep-bar bd" style="height:${h(r.bd)}%;">${r.bd?`<span>${r.bd}</span>`:''}</div>
+          <div class="rep-bar rp" style="height:${h(r.rp)}%;">${r.rp?`<span>${r.rp}</span>`:''}</div>
+        </div>
+        <div class="rep-col-lbl">${short}</div>
+      </div>`;
+    }).join('');
+
+    $('rep1Body').innerHTML = [...rows].reverse().map(r=>`
+      <tr>
+        <td class="mono">${fmtDate(r.d)}</td>
+        <td class="mono">${r.bd}</td>
+        <td class="mono">${r.rp}</td>
+        <td class="mono">${r.bd-r.rp===0?'<span class="delta-flat">0</span>':deltaHtml(r.bd,r.rp,false)}</td>
+      </tr>`).join('') + `
+      <tr class="rep-total"><td>Total</td><td class="mono">${totBd}</td><td class="mono">${totRp}</td><td class="mono">${deltaHtml(totBd,totRp,false)}</td></tr>`;
+
+    // ---- Report 2: Breakdown frequency per Category-3 (daily + weekly comparison) ----
+    const UNSET = '(Unspecified)';
+    const catOf = e => (e.category3||'').trim() || UNSET;
+    const countByCat = (from, to)=>{
+      const m = {};
+      data.forEach(e=>{
+        if(e.breakdownDate && e.breakdownDate>=from && e.breakdownDate<=to){
+          const k = catOf(e); m[k] = (m[k]||0)+1;
+        }
+      });
+      return m;
+    };
+    const compareTable = (bodyId, prevMap, curMap)=>{
+      const keys = Array.from(new Set([...Object.keys(prevMap), ...Object.keys(curMap)]))
+        .sort((a,b)=> a===UNSET?1 : b===UNSET?-1 : (curMap[b]||0)-(curMap[a]||0) || (prevMap[b]||0)-(prevMap[a]||0) || a.localeCompare(b));
+      const body = $(bodyId);
+      if(keys.length===0){ body.innerHTML = '<tr class="empty-row"><td colspan="4">No breakdowns recorded in these periods.</td></tr>'; return; }
+      let tp=0, tc=0;
+      body.innerHTML = keys.map(k=>{
+        const p = prevMap[k]||0, c = curMap[k]||0; tp+=p; tc+=c;
+        return `<tr><td>${k}</td><td class="mono">${p}</td><td class="mono">${c}</td><td class="mono">${deltaHtml(c,p,true)}</td></tr>`;
+      }).join('') + `<tr class="rep-total"><td>Total</td><td class="mono">${tp}</td><td class="mono">${tc}</td><td class="mono">${deltaHtml(tc,tp,true)}</td></tr>`;
+    };
+
+    // Daily: selected day vs the day before
+    const prevDay = addDays(refDate,-1);
+    $('rep2DPrevHead').textContent = fmtDate(prevDay);
+    $('rep2DCurHead').textContent = fmtDate(refDate);
+    $('rep2DailyHint').textContent = `Breakdowns per Category-3 on ${fmtDate(refDate)} compared with ${fmtDate(prevDay)}.`;
+    compareTable('rep2DailyBody', countByCat(prevDay,prevDay), countByCat(refDate,refDate));
+
+    // Weekly: week (Mon–Sun) containing the selected date vs the week before
+    const wkStart = weekStartMon(refDate), wkEnd = addDays(wkStart,6);
+    const pwStart = addDays(wkStart,-7), pwEnd = addDays(wkStart,-1);
+    $('rep2WPrevHead').textContent = `${fmtDate(pwStart)} – ${fmtDate(pwEnd)}`;
+    $('rep2WCurHead').textContent = `${fmtDate(wkStart)} – ${fmtDate(wkEnd)}`;
+    $('rep2WeeklyHint').textContent = `Weeks run Monday to Sunday. Breakdowns per Category-3 for the week of ${fmtDate(wkStart)} compared with the week of ${fmtDate(pwStart)}.`;
+    compareTable('rep2WeeklyBody', countByCat(pwStart,pwEnd), countByCat(wkStart,wkEnd));
+  }
+  if($('repDate')) $('repDate').addEventListener('input', renderReports);
+  if($('repDays')) $('repDays').addEventListener('input', renderReports);
 
   // ---------- R&M Dashboard ----------
   // Total DL Running % / DL Running % per Assigned Parking / Open WO per
@@ -2583,6 +2824,65 @@
           </div>`;
       }).join('');
     }
+
+    // ---- Open WO per Assigned Parking Actual (Ongoing or Impounded — same rule as per Designation) ----
+    const openParkRow = $('rmOpenParkingRow');
+    const openByPark = {};
+    entries.forEach(e=>{
+      const b = dashboardBucket(e);
+      if(b==='Ongoing' || b==='Impounded'){
+        const k = (e.parkingActual||'').trim() || UNSET;
+        openByPark[k] = (openByPark[k]||0) + 1;
+      }
+    });
+    const openParkKeys = Array.from(new Set([
+      ...plateNumbers.map(p=>p.parkingActual||UNSET).filter(k=>k!==UNSET),
+      ...Object.keys(openByPark)
+    ])).sort(sortKeys);
+    if(openParkKeys.length===0){
+      openParkRow.innerHTML = '<p class="roster-hint" style="margin:0;">No open work orders.</p>';
+    } else {
+      openParkRow.innerHTML = openParkKeys.map((park,i)=>`
+        <div class="stat-card" style="--stat-color:${cardColors[i % cardColors.length]};">
+          <div class="stat-num">${openByPark[park]||0}</div>
+          <div class="stat-label">${park}</div>
+        </div>`).join('');
+    }
+
+    // ---- Bar graphs: Open WO by Age Mapping and Breakdown Category-1 / 2 / 3 ----
+    const openForCharts = entries.filter(e=>{
+      const b = dashboardBucket(e);
+      return b==='Ongoing' || b==='Impounded';
+    });
+    const barChart = (title, items)=>{
+      const total = items.reduce((a,i)=>a+i.count,0);
+      const max = Math.max(1, ...items.map(i=>i.count));
+      const body = total===0
+        ? '<div class="bar-empty">No open work orders.</div>'
+        : items.map(i=>`
+            <div class="bar-row" title="${i.label}: ${i.count}">
+              <span class="bar-label">${i.label}</span>
+              <div class="bar-track"><div class="bar-fill" style="width:${(i.count/max)*100}%;background:${i.color};"></div></div>
+              <span class="bar-val">${i.count}</span>
+            </div>`).join('');
+      return `<div class="bar-chart"><h4>${title}<span>${total} open</span></h4>${body}</div>`;
+    };
+    const ageItems = AGE_BUCKETS.map(b=>({
+      label:b.label, color:b.color,
+      count: openForCharts.filter(e=>{ const bk = computeAgeing(e).bucket; return bk && bk.label===b.label; }).length
+    }));
+    const catItems = key=>{
+      const counts = {};
+      openForCharts.forEach(e=>{ const k = (e[key]||'').trim() || UNSET; counts[k] = (counts[k]||0)+1; });
+      return Object.keys(counts)
+        .sort((a,b)=> a===UNSET?1 : b===UNSET?-1 : counts[b]-counts[a] || a.localeCompare(b))
+        .map((k,i)=>({ label:k, count:counts[k], color:cardColors[i % cardColors.length] }));
+    };
+    $('rmBarCharts').innerHTML =
+      barChart('Open WO by Age Mapping', ageItems) +
+      barChart('Open WO by Breakdown Category-1', catItems('category1')) +
+      barChart('Open WO by Breakdown Category-2', catItems('category2')) +
+      barChart('Open WO by Breakdown Category-3', catItems('category3'));
 
     // ---- Open WO per Designation (Ongoing or Impounded — not yet Completed/Total Loss) ----
     const desigRow = $('rmDesigRow');
