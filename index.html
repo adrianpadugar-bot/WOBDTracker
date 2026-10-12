@@ -627,6 +627,23 @@
     </div>
 
     <div class="roster-card">
+      <div class="toolbar" style="margin-bottom:6px;">
+        <span class="tb-label">Breakdown date</span>
+        <select id="rmDatePreset">
+          <option value="all">All dates</option>
+          <option value="today">Today</option>
+          <option value="yesterday">Yesterday</option>
+          <option value="lastweek">Last Week</option>
+          <option value="custom">Custom Date</option>
+        </select>
+        <span id="rmDateCustom" style="display:none;align-items:center;gap:10px;">
+          <input type="date" id="rmDateFrom" title="From">
+          <span class="tb-label">to</span>
+          <input type="date" id="rmDateTo" title="To">
+        </span>
+      </div>
+      <p class="roster-hint" id="rmDateHint">Showing all work orders.</p>
+
       <div class="stat-row" style="grid-template-columns:repeat(1,1fr);max-width:220px;margin-bottom:20px;">
         <div class="stat-card" style="--stat-color:var(--teal);">
           <div class="stat-num" id="rmStatDLRunning">0%</div>
@@ -3124,7 +3141,51 @@ try{
   // Total DL Running % / DL Running % per Assigned Parking / Open WO per
   // Designation / Overall Status Summary — recomputed alongside the WFM
   // Dashboard whenever the ledger or plate registry changes.
+  function rmDateRange(){
+    const preset = $('rmDatePreset') ? $('rmDatePreset').value : 'all';
+    const today = ymd(new Date());
+    if(preset==='today') return { from:today, to:today, label:'Today' };
+    if(preset==='yesterday'){ const y = addDays(today,-1); return { from:y, to:y, label:'Yesterday' }; }
+    if(preset==='lastweek'){
+      const start = addDays(weekStartMon(today),-7);   // previous Monday
+      return { from:start, to:addDays(start,6), label:'Last Week' };  // …to Sunday
+    }
+    if(preset==='custom') return { from:$('rmDateFrom').value, to:$('rmDateTo').value, label:'Custom' };
+    return { from:'', to:'', label:'' };
+  }
   function renderRMDashboard(){
+    const preset = $('rmDatePreset') ? $('rmDatePreset').value : 'all';
+    if($('rmDateCustom')) $('rmDateCustom').style.display = preset==='custom' ? 'inline-flex' : 'none';
+    const { from, to, label } = rmDateRange();
+    let list = entries;
+    if(from || to){
+      list = entries.filter(e=>{
+        const d = e.breakdownDate || '';
+        if(!d) return false;
+        if(from && d < from) return false;
+        if(to && d > to) return false;
+        return true;
+      });
+    }
+    const hint = $('rmDateHint');
+    if(hint){
+      if(from || to){
+        const span = (from && to && from!==to) ? `${fmtDate(from)} – ${fmtDate(to)}`
+                   : (from && to) ? fmtDate(from)
+                   : from ? `from ${fmtDate(from)}` : `up to ${fmtDate(to)}`;
+        hint.textContent = `${label}: Breakdown Date ${span} — ${list.length} of ${entries.length} work order${entries.length===1?'':'s'} included.`;
+      } else {
+        hint.textContent = preset==='custom'
+          ? 'Pick a From and/or To date to filter by Breakdown Date.'
+          : 'Showing all work orders.';
+      }
+    }
+    renderRMDashboardCore(list);
+  }
+  if($('rmDatePreset')) $('rmDatePreset').addEventListener('change', renderRMDashboard);
+  ['rmDateFrom','rmDateTo'].forEach(id=>{ if($(id)) $(id).addEventListener('input', renderRMDashboard); });
+
+  function renderRMDashboardCore(entries){
     const UNSET = '(Unspecified)';
     const sortKeys = (a,b)=> a===UNSET?1 : b===UNSET?-1 : a.localeCompare(b);
     const cardColors = ['var(--teal)','var(--blue)','var(--amber)','var(--violet)','var(--red)'];
