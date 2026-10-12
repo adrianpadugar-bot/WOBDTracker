@@ -554,7 +554,7 @@
       </div>
     </div>
 
-    <div class="stat-row" style="grid-template-columns:repeat(2,1fr);margin-bottom:10px;">
+    <div class="stat-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:10px;">
       <div class="stat-card" style="--stat-color:var(--amber);">
         <div class="stat-num" id="dashStatAck">0</div>
         <div class="stat-label">To Acknowledge</div>
@@ -562,6 +562,10 @@
       <div class="stat-card" style="--stat-color:var(--blue);">
         <div class="stat-num" id="dashStatOngoing">0</div>
         <div class="stat-label">Ongoing</div>
+      </div>
+      <div class="stat-card" id="dashStatReceiveCard" style="--stat-color:var(--teal);cursor:pointer;" title="Open Units For Receive">
+        <div class="stat-num" id="dashStatReceive">0</div>
+        <div class="stat-label">Units For Receive</div>
       </div>
     </div>
 
@@ -2876,6 +2880,8 @@ try{
 
     $('dashStatAck').textContent = toAck.length;
     $('dashStatOngoing').textContent = ongoing.length;
+    // Units For Receive = completed work orders not yet marked "Unit Received" (not affected by the search box).
+    $('dashStatReceive').textContent = entries.filter(e=>e.status==='Completed' && !e.unitReceived).length;
     $('dashAckCount').textContent = toAck.length;
     $('dashOngoingCount').textContent = ongoing.length;
 
@@ -2897,7 +2903,8 @@ try{
     const impoundedCount = plateNumbers.filter(p=>impoundedPlates.has(p.plate)).length;
     const totalLossCount = plateNumbers.filter(p=>totalLossPlates.has(p.plate)).length;
     const runningCount = plateNumbers.filter(p=>!notRunningPlates.has(p.plate)).length;
-    const dlRunningPct = totalTrucks>0 ? Math.round((runningCount/totalTrucks)*100) : 0;
+    // WFM Dashboard DL Running % = (Total Trucks − Total Running) / Total Trucks
+    const dlRunningPct = totalTrucks>0 ? Math.round(((totalTrucks - runningCount)/totalTrucks)*100) : 0;
 
     $('dashStatTotalTrucks').textContent = totalTrucks;
     $('dashStatTotalRunning').textContent = runningCount;
@@ -2959,6 +2966,7 @@ try{
     renderRMDashboard();
     if(typeof renderReports==='function') renderReports();
   }
+  if($('dashStatReceiveCard')) $('dashStatReceiveCard').addEventListener('click', ()=>switchModule('receive'));
   const dashSearchEl = document.getElementById('dashSearchBox');
   if(dashSearchEl) dashSearchEl.addEventListener('input', renderWorkDashboard);
 
