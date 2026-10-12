@@ -1324,8 +1324,8 @@
           <input type="text" id="f-trail3" placeholder="Next update">
         </div>
         <div class="field">
-          <label for="f-status">Status</label>
-          <select id="f-status"></select>
+          <label for="f-detailedStatus">Status</label>
+          <select id="f-detailedStatus"></select>
         </div>
         <div class="field full readonly">
           <label>Latest Detailed Status (auto)</label>
@@ -1985,19 +1985,50 @@ try{
     'IH: On-going repair / Diagnosis': 'Ongoing',
     'IH: Awaiting PO': 'Ongoing',
     'IH: Awaiting Parts Delivery': 'Ongoing',
+    'AC: On-going repair': 'Ongoing',
+    'AC: Awaiting LOA': 'Ongoing',
+    'AC: Pending Insurance Docs': 'Ongoing',
+    'Impound / Hold by Govt': 'Impounded',
+    'Total Loss': 'Total Loss',
+    'AC: Glasswork Claim': 'Ongoing',
+    'Completed': 'Completed',
+    'Under Warranty': 'Ongoing',
+    'IH: Tire Job': 'Ongoing',
+    'Non-Technical Issue': 'Ongoing',
+    'IH: Overhauling': 'Ongoing',
+    'IH: Vanleaks': 'Ongoing',
+    'Franchise Issue': 'Ongoing',
+    'Lost Plate': 'Ongoing',
+    'LTO Registration Issue': 'Ongoing',
+    // Legacy labels — kept so older entries / trail text still roll up correctly.
     'ACC: On-going repair': 'Ongoing',
     'ACC: Awaiting LOA': 'Ongoing',
     'ACC: Pending Insurance Docs': 'Ongoing',
-    "Impound / Hold by Gov't": 'Impounded',
-    'Total Loss': 'Total Loss',
     'ACC: Glasswork Claim': 'Ongoing',
-    'Completed': 'Completed',
-    'Under Warranty': 'Ongoing',
-    'IH: The Job': 'Ongoing',
-    'Non-Technical Issue': 'Ongoing',
-    'IH: Overhauling': 'Ongoing'
+    "Impound / Hold by Gov't": 'Impounded',
+    'IH: The Job': 'Ongoing'
   };
-  const DETAILED_STATUS_OPTIONS = Object.keys(DETAILED_STATUS_BUCKET);
+  // Choices shown in the Status dropdown (Create/Edit entry, Repair Monitoring filter, Roster), in this order.
+  const DETAILED_STATUS_OPTIONS = [
+    'IH: On-going repair / Diagnosis',
+    'IH: Awaiting PO',
+    'IH: Awaiting Parts Delivery',
+    'AC: On-going repair',
+    'AC: Awaiting LOA',
+    'AC: Pending Insurance Docs',
+    'Impound / Hold by Govt',
+    'Total Loss',
+    'AC: Glasswork Claim',
+    'Completed',
+    'Under Warranty',
+    'IH: Tire Job',
+    'Non-Technical Issue',
+    'IH: Overhauling',
+    'IH: Vanleaks',
+    'Franchise Issue',
+    'Lost Plate',
+    'LTO Registration Issue'
+  ];
 
   // Latest Detailed Status is no longer chosen manually — it always mirrors
   // whichever Status Trail field was filled in most recently: Trail-3 if it
@@ -2015,7 +2046,7 @@ try{
   // coarse Status field (and, for Impounded, the legacy category1 check) so
   // nothing that predates this feature disappears from the dashboard.
   function dashboardBucket(e){
-    const mapped = DETAILED_STATUS_BUCKET[e.latestStatus];
+    const mapped = DETAILED_STATUS_BUCKET[e.detailedStatus] || DETAILED_STATUS_BUCKET[e.latestStatus];
     if(mapped) return mapped;
     if(e.status==='Completed') return 'Completed';
     if(e.status==='Total Loss') return 'Total Loss';
@@ -2098,7 +2129,7 @@ try{
     const typeF = $('filterTruckType').value;
 
     let filtered = monitorEntries().filter(e=>{
-      if(statusF && e.status!==statusF) return false;
+      if(statusF && (e.detailedStatus||e.status)!==statusF) return false;
       if(typeF && e.truckType!==typeF) return false;
       if(ageMapF){
         const info = computeAgeing(e);
@@ -2158,7 +2189,7 @@ try{
         <td>${e.trail2||'—'}</td>
         <td>${e.trail3||'—'}</td>
         <td style="white-space:normal;max-width:220px;">${e.latestStatus||'—'}</td>
-        <td><span class="pill ${statusClass(e.status)}">${e.status||'—'}</span></td>
+        <td><span class="pill ${ {Completed:'completed','Total Loss':'totalloss',Impounded:'impounded'}[dashboardBucket(e)] || statusClass(e.status)}">${e.detailedStatus||e.status||'—'}</span></td>
         <td>${e.acknowledgedBy||'—'}${e.acknowledgedAt?`<div style="font-size:10.5px;color:var(--text-mute);">${fmtDate(e.acknowledgedAt.slice(0,10))}</div>`:''}</td>
         <td>${(e.status==='Completed'||e.status==='Total Loss')
               ? `<span class="pill ${e.status==='Total Loss'?'totalloss':'completed'}">${e.status==='Total Loss'?'Total Loss':'Done'}</span>`
@@ -2184,6 +2215,7 @@ try{
     const note = prompt(`Mark ${e.workOrderNo||e.designation||'this work order'} as Completed?\nAdd a closing remark (optional, or Cancel to abort):`, computeLatestStatus(e)||'');
     if(note===null) return;
     e.status = 'Completed';
+    e.detailedStatus = 'Completed';
     if(!e.completedDate) e.completedDate = new Date().toISOString().slice(0,10);
     syncCompletionStamp(e);
     if(note.trim()){
@@ -2226,7 +2258,7 @@ try{
      'category1','category2','category3','trail1','trail2','trail3','mobile','location','reason'].forEach(k=>{ $('f-'+k).value=''; });
     Array.from($('f-mechanics').options).forEach(o=>{ o.selected = false; });
     $('f-latestStatusDisplay').value = '';
-    $('f-status').value = 'Ongoing';
+    $('f-detailedStatus').value = '';
     $('f-ageingDaysDisplay').value='';
     $('f-ageMappingDisplay').value='';
   }
@@ -2321,13 +2353,20 @@ try{
       mobile: $('f-mobile').value.trim(),
       location: $('f-location').value.trim(),
       reason: $('f-reason').value.trim(),
-      status: $('f-status').value
+      detailedStatus: $('f-detailedStatus').value
     };
+    // Internal coarse status (Ongoing / Completed / Total Loss) is derived from the Status chosen above.
+    const prevEntry = editingId ? entries.find(x=>x.id===editingId) : null;
+    data.status = prevEntry ? (prevEntry.status || 'Ongoing') : 'Ongoing';
     data.latestStatus = computeLatestStatus(data);
-    // Completed / Total Loss are terminal detailed statuses — keep the coarse
-    // Status field in sync automatically so the two never disagree.
+    const pickedBucket = DETAILED_STATUS_BUCKET[data.detailedStatus];
     const detailedBucket = DETAILED_STATUS_BUCKET[data.latestStatus];
-    if(detailedBucket==='Completed'){
+    if(pickedBucket){
+      data.status = pickedBucket==='Completed' ? 'Completed' : (pickedBucket==='Total Loss' ? 'Total Loss' : 'Ongoing');
+      if(pickedBucket==='Completed' && !data.completedDate) data.completedDate = new Date().toISOString().slice(0,10);
+      // Moving a completed WO back to an open status releases its completion date so ageing runs again.
+      if(prevEntry && prevEntry.status==='Completed' && data.status!=='Completed' && data.completedDate===prevEntry.completedDate) data.completedDate = '';
+    } else if(detailedBucket==='Completed'){
       data.status = 'Completed';
       if(!data.completedDate) data.completedDate = new Date().toISOString().slice(0,10);
     } else if(detailedBucket==='Total Loss'){
@@ -2856,6 +2895,7 @@ try{
     if(!e) return;
     if(!confirm(`Reopen ${e.workOrderNo||e.designation||'this work order'} and set status back to Ongoing?`)) return;
     e.status = 'Ongoing';
+    if(['Completed','Total Loss'].includes(DETAILED_STATUS_BUCKET[e.detailedStatus])) e.detailedStatus = '';
     syncCompletionStamp(e);
     await setJSON('fleet_entries', entries);
     renderTable();
@@ -3267,7 +3307,7 @@ try{
     parkingActual: ['SOC5 EP','SOC 8','SOC6 EP','BOCAUE','SOC11','SOC12','SOC9','SOC7'],
     yearModel: (()=>{ const a=[]; for(let y=2030;y>=2010;y--) a.push(String(y)); return a; })(),
     truckType: ['4W-11ft','6W-14ft','TOWTRUCK','4W-15ft','6W-16ft','10W-32ft','4W AUV','4W CV','6W CV','10W CV','10W WV'],
-    status: ['Ongoing','Completed','On Hold','Cancelled','Total Loss'],
+    status: DETAILED_STATUS_OPTIONS.slice(),
     requestor: [],
     agency: [
       "Advance Certified Employment Inc.",
@@ -3335,8 +3375,7 @@ try{
     fillSelect($('f-truckType'), 'truckType', 'Select truck type');
     fillSelect($('f-parkingActual'), 'parkingActual', 'Select parking');
     fillSelect($('f-mechanics'), 'mechanics', null);
-    fillSelect($('f-status'), 'status', null);
-    if(!$('f-status').value) $('f-status').value = getOptions('status')[0] || '';
+    fillSelect($('f-detailedStatus'), 'status', 'Select status');
     fillSelect($('wo-parking'), 'parkingActual', 'Select parking');
     fillSelect($('wo-agency'), 'agency', 'Select agency');
     fillSelect($('f-agency'), 'agency', 'Select agency');
@@ -3882,7 +3921,7 @@ try{
       C('Category-1', e=>e.category1), C('Category-2', e=>e.category2), C('Category-3', e=>e.category3),
       C('Assigned Mechanics', e=>e.mechanics),
       C('Status Trail 1', e=>e.trail1), C('Status Trail 2', e=>e.trail2), C('Status Trail 3', e=>e.trail3),
-      C('Latest Detailed Status', e=>e.latestStatus), C('Status', e=>e.status),
+      C('Latest Detailed Status', e=>e.latestStatus), C('Status', e=>e.detailedStatus||e.status),
       C('Mobile', e=>e.mobile), C('Location', e=>e.location), C('Reason', e=>e.reason),
       C('Acknowledged', e=>yesNo(e.acknowledged)), C('Acknowledged By', e=>e.acknowledgedBy), C('Acknowledged At', e=>dlFmtDT(e.acknowledgedAt)),
       C('Completed At', e=>dlFmtDT(e.completedAt)), C('Completed By', e=>e.completedBy),
