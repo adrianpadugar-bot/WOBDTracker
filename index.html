@@ -396,7 +396,7 @@
 </head>
 <body>
 
-<div class="login-gate" id="loginGate">
+<div class="login-gate show" id="loginGate">
   <div class="login-card">
     <p class="login-eyebrow">Fleet Operations</p>
     <h1>Sign in</h1>
@@ -658,6 +658,11 @@
       <div class="stat-block">
         <p class="summary-subhead">Overall Status Summary</p>
         <div class="stat-row-auto" id="rmStatusRow"></div>
+      </div>
+
+      <div class="stat-block">
+        <p class="summary-subhead">Work Orders per Status (Status Dropdown)</p>
+        <div class="stat-row-auto" id="rmDetailedStatusRow"></div>
       </div>
     </div>
   </section>
@@ -1402,16 +1407,12 @@ try{
   const ssGet = k => { try{ return sessionStorage.getItem(LS_PREFIX+k); }catch(e){ return null; } };
   const ssSet = (k,v) => { try{ sessionStorage.setItem(LS_PREFIX+k, v); }catch(e){} };
 
-  async function getSessionAuthed(){
-    if(ssGet('fleet_session_authed') === '1') return true;
-    if(!storageOK()) return false;
-    try{ const r = await window.storage.get('fleet_session_authed', false); return !!r && r.value === '1'; }
-    catch(e){ return false; }
-  }
-  async function setSessionAuthed(v){
-    ssSet('fleet_session_authed', v ? '1' : '0');
+  // Login is NOT remembered: every time the page is opened/reloaded the Sign-in screen is shown.
+  // This only clears any flag left behind by older versions.
+  async function clearSessionAuthed(){
+    ssSet('fleet_session_authed', '0');
     if(!storageOK()) return;
-    try{ await window.storage.set('fleet_session_authed', v ? '1' : '0', false); }
+    try{ await window.storage.set('fleet_session_authed', '0', false); }
     catch(e){}
   }
 
@@ -1442,7 +1443,6 @@ try{
   }
 
   async function signInAsAdminIfNeeded(account){
-    if(currentUserId && users.some(u=>u.id===currentUserId)) return;
     const admin = ensureAdminUserRecord(account);
     await saveUsers();
     currentUserId = admin.id;
@@ -1456,7 +1456,6 @@ try{
     const account = AUTH_ACCOUNTS.find(a=>a.username===u && a.password===p);
     if(account){
       $('loginError').classList.remove('show');
-      await setSessionAuthed(true);
       await signInAsAdminIfNeeded(account);
       renderSignedInBar();
       renderUserList();
@@ -1473,7 +1472,7 @@ try{
   });
 
   $('logoutBtn').addEventListener('click', async ()=>{
-    await setSessionAuthed(false);
+    await clearSessionAuthed();
     lockApp();
   });
 
@@ -3274,6 +3273,35 @@ try{
           <div class="stat-label">Total WO</div>
         </div>`;
     }
+
+    // ---- Work Orders per Status: one card per option in the Status dropdown ----
+    // Uses the same option list as the Status dropdown (built-in + any added in Roster),
+    // so new dropdown options automatically get their own card.
+    const dsRow = $('rmDetailedStatusRow');
+    const statusOptions = getOptions('status');
+    const optSet = new Set(statusOptions);
+    const dsCounts = {};
+    let dsUnspecified = 0;
+    entries.forEach(e=>{
+      const v = e.detailedStatus || (optSet.has(e.latestStatus) ? e.latestStatus : '');
+      if(v && optSet.has(v)) dsCounts[v] = (dsCounts[v]||0) + 1;
+      else dsUnspecified++;
+    });
+    if(entries.length===0){
+      dsRow.innerHTML = '<p class="roster-hint" style="margin:0;">No work orders logged yet.</p>';
+    } else {
+      const esc = t => String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      const bucketColor = { 'Ongoing':'var(--blue)', 'Impounded':'var(--amber)', 'Completed':'var(--teal)', 'Total Loss':'var(--red)' };
+      const card = (label, count, color)=>`
+        <div class="stat-card" style="--stat-color:${color};">
+          <div class="stat-num">${count}</div>
+          <div class="stat-label">${esc(label)}</div>
+        </div>`;
+      dsRow.innerHTML = statusOptions.map((opt,i)=>
+        card(opt, dsCounts[opt]||0, bucketColor[DETAILED_STATUS_BUCKET[opt]] || cardColors[i % cardColors.length])
+      ).join('') +
+        (dsUnspecified ? card('(No Status Selected)', dsUnspecified, 'var(--text-mute)') : '');
+    }
   }
 
   // ---------- Roster: dropdown option manager ----------
@@ -4142,12 +4170,12 @@ try{
 
   // ---------- Init ----------
   async function init(){
-    const authed = await getSessionAuthed();
+    await clearSessionAuthed();
+    lockApp();
 
     users = await getJSON('fleet_users', []);
     currentUserId = await loadCurrentUserId();
     if(currentUserId && !users.some(u=>u.id===currentUserId)) currentUserId = null;
-    if(authed){ await signInAsAdminIfNeeded(); unlockApp(); } else { lockApp(); }
 
     renderSignedInBar();
     renderUserList();
@@ -4170,6 +4198,7 @@ try{
     refreshWOPreview();
     applyAccessControl();
   }
+  window.addEventListener('pageshow', e=>{ if(e.persisted) location.reload(); });
   init();
 })();
 </script>
