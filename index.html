@@ -112,6 +112,18 @@
   .ack-meta{font-size:12px;color:var(--text-mute);}
   .ack-status{font-size:12.5px;color:var(--text-dim);max-width:460px;}
   .ack-actions{display:flex;gap:8px;flex-shrink:0;}
+  .dl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px;margin-bottom:18px;}
+  .dl-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;display:flex;flex-direction:column;gap:8px;}
+  .dl-card h3{margin:0;font-size:13.5px;color:var(--text);font-weight:600;}
+  .dl-card .dl-meta{font-size:11.5px;color:var(--text-mute);flex:1;}
+  .dl-card .dl-top{display:flex;gap:8px;align-items:flex-start;}
+  .dl-card input[type=checkbox], .dl-cols input[type=checkbox]{width:auto;accent-color:var(--blue);}
+  .dl-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;}
+  .dl-panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;}
+  .dl-panel h2{margin:0 0 4px;font-size:15px;color:var(--text);}
+  .dl-cols{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px 14px;margin:8px 0 14px;max-height:280px;overflow:auto;padding:10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg);}
+  .dl-cols label{display:flex;gap:7px;align-items:center;font-size:12px;color:var(--text-dim);cursor:pointer;}
+  .dl-filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:12px;}
   .empty-ack{padding:50px 20px;text-align:center;color:var(--text-mute);font-size:13.5px;background:var(--panel);border:1px dashed var(--line);border-radius:var(--radius);}
 
   .table-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);}
@@ -440,9 +452,11 @@
     <button type="button" class="module-nav-btn" data-module="monitor">Repair Monitoring</button>
     <button type="button" class="module-nav-btn" data-module="acknowledge">Work Order To Acknowledge <span class="nav-badge" id="ackNavBadge">0</span></button>
     <button type="button" class="module-nav-btn" data-module="complete">Complete <span class="nav-badge" id="completeNavBadge">0</span></button>
+    <button type="button" class="module-nav-btn" data-module="receive">Units For Receive <span class="nav-badge" id="receiveNavBadge">0</span></button>
     <button type="button" class="module-nav-btn" data-module="reports">Reports</button>
     <button type="button" class="module-nav-btn" data-module="roster">Roster</button>
     <button type="button" class="module-nav-btn" data-module="plates" id="platesNavBtn">Plate Number List</button>
+    <button type="button" class="module-nav-btn" data-module="downloads">Downloads</button>
     <button type="button" class="module-nav-btn" data-module="users">Users &amp; Access</button>
   </div>
 
@@ -773,6 +787,19 @@
     </div>
   </section>
 
+  <section class="module" id="module-receive">
+    <div class="masthead" style="margin-bottom:18px;">
+      <div>
+        <p class="eyebrow">Handover</p>
+        <h1 style="font-size:20px;">Units For Receive</h1>
+        <p class="sub">Completed work orders waiting to be received. The running time counts from the moment the work order was completed until the unit is received.</p>
+      </div>
+    </div>
+    <div id="receiveListWrap">
+      <div class="empty-ack">No units waiting to be received.</div>
+    </div>
+  </section>
+
   <section class="module" id="module-reports">
     <div class="masthead" style="margin-bottom:18px;">
       <div>
@@ -1001,6 +1028,46 @@
           <button type="button" class="btn btn-primary btn-sm" id="plateBulkImportBtn">Import all</button>
         </div>
       </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="module" id="module-downloads">
+    <div class="masthead" style="margin-bottom:18px;">
+      <div>
+        <p class="eyebrow">Export</p>
+        <h1 style="font-size:20px;">Downloads</h1>
+        <p class="sub">Download everything at once, one module at a time, or build your own custom export. Files are CSV (opens in Excel).</p>
+      </div>
+    </div>
+
+    <div class="dl-bar">
+      <button type="button" class="btn btn-primary btn-sm" id="dlAllBtn">Download All (ZIP)</button>
+      <button type="button" class="btn btn-sm" id="dlSelectedBtn">Download Selected (ZIP)</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="dlSelAllBtn">Select all</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="dlSelNoneBtn">Select none</button>
+      <span class="hint" id="dlStatus"></span>
+    </div>
+    <div class="dl-grid" id="dlGrid"></div>
+
+    <div class="dl-panel">
+      <h2>Custom export</h2>
+      <p class="sub" style="margin:0 0 12px;">Pick a module, choose the columns you need, and optionally narrow it down by date or keyword.</p>
+      <div class="dl-filters">
+        <div class="field"><label for="dlCustomDataset">Module / Data</label><select id="dlCustomDataset"></select></div>
+        <div class="field"><label for="dlDateFrom" id="dlDateFromLbl">Date from</label><input type="date" id="dlDateFrom"></div>
+        <div class="field"><label for="dlDateTo" id="dlDateToLbl">Date to</label><input type="date" id="dlDateTo"></div>
+        <div class="field"><label for="dlSearch">Keyword (any column)</label><input type="text" id="dlSearch" placeholder="e.g. plate, requestor, status"></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <b style="font-size:12px;color:var(--text-dim);">Columns</b>
+        <button type="button" class="btn btn-ghost btn-sm" id="dlColsAll">Select all</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="dlColsNone">Clear</button>
+      </div>
+      <div class="dl-cols" id="dlCustomCols"></div>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+        <button type="button" class="btn btn-primary" id="dlCustomBtn">Download custom CSV</button>
+        <span class="hint" id="dlCustomInfo"></span>
       </div>
     </div>
   </section>
@@ -1412,6 +1479,24 @@
   function isAdmin(){ const u = getCurrentUser(); return !!u && u.role==='admin'; }
   function canEdit(){ const u = getCurrentUser(); return !!u && (u.role==='admin' || u.role==='dispatcher' || u.role==='wfm-fte' || u.role==='rm-fte'); }
   // Dispatcher & WFM FTE get view-only access on the WFM Dashboard board — no Acknowledge, Complete, or Reopen actions there.
+  // Dispatcher & WFM FTE can never edit/save/delete an EXISTING entry (e.g. an Ongoing item) — they can only create new Work Orders.
+  // Everyone can VIEW Units For Receive; only Admin, Dispatcher & WFM FTE can click "Unit Received" (R&M FTE / Viewer / Guest cannot).
+  function canMarkReceived(){ const u = getCurrentUser(); return !!u && (u.role==='admin' || u.role==='dispatcher' || u.role==='wfm-fte'); }
+  // Completion stamp: who completed the WO and when (used by Units For Receive running time).
+  function syncCompletionStamp(e){
+    if(e.status==='Completed'){
+      if(!e.completedAt){
+        e.completedAt = new Date().toISOString();
+        const u = getCurrentUser();
+        e.completedBy = u ? u.name : (e.completedBy || '');
+      }
+    } else {
+      e.completedAt = ''; e.completedBy = '';
+      e.unitReceived = false; e.receivedAt = ''; e.receivedBy = '';
+    }
+  }
+  function isRestrictedRole(){ const u = getCurrentUser(); return !!u && (u.role==='dispatcher' || u.role==='wfm-fte'); }
+  function canModifyExistingEntry(){ return canEdit() && !isRestrictedRole(); }
   function canManageDashboardActions(){ const u = getCurrentUser(); return !!u && (u.role==='admin' || u.role==='rm-fte'); }
   const ROLE_LABELS = { admin:'Admin', dispatcher:'Dispatcher', 'wfm-fte':'WFM FTE', 'rm-fte':'R&M FTE', viewer:'Viewer' };
   function roleLabel(role){ return ROLE_LABELS[role] || role; }
@@ -1449,7 +1534,7 @@
 
   // Roles limited to a reduced nav — they can only view/use these modules.
   const NAV_RESTRICTED_ROLES = ['dispatcher', 'wfm-fte'];
-  const RESTRICTED_ALLOWED_MODULES = ['create', 'dashboard', 'plates', 'complete'];
+  const RESTRICTED_ALLOWED_MODULES = ['create', 'dashboard', 'plates', 'complete', 'receive', 'downloads'];
   // R&M FTE must not see the WFM Dashboard at all (not even view-only).
   const DASHBOARD_BLOCKED_ROLES = ['rm-fte'];
 
@@ -1497,6 +1582,7 @@
     $('plateAddArea').style.display = restrictNav ? 'none' : '';
     // Complete module: Dispatcher & WFM FTE get view-only cards (no Reopen / no editing).
     if(typeof renderCompleteList==='function') renderCompleteList();
+    if(typeof renderDownloads==='function') renderDownloads();
   }
 
   function renderUserList(){
@@ -1872,13 +1958,13 @@
     return null;
   }
 
-  // DL Running % formula: (Plate List Total Trucks − (Ongoing + Impounded +
-  // Total Loss)) / Plate List Total Trucks. A ledger entry counts against
-  // the truck's "running" status when its dashboard bucket is Ongoing,
-  // Impounded, or Total Loss.
+  // DL Running % formula: (Total Trucks − (Ongoing + Impounded)) / Total Trucks.
+  // A ledger entry counts against the truck's "running" status when its
+  // dashboard bucket is Ongoing or Impounded (Total Loss is NOT deducted).
+  // The same rule applies per Assigned Parking.
   function hasOpenWO(e){
     const b = dashboardBucket(e);
-    return b==='Ongoing' || b==='Impounded' || b==='Total Loss';
+    return b==='Ongoing' || b==='Impounded';
   }
 
   // Repair Monitoring only shows work orders that were acknowledged in "Work Order To Acknowledge".
@@ -2033,6 +2119,7 @@
     if(note===null) return;
     e.status = 'Completed';
     if(!e.completedDate) e.completedDate = new Date().toISOString().slice(0,10);
+    syncCompletionStamp(e);
     if(note.trim()){
       // Feed the closing remark into the next open Status Trail slot so
       // Latest Detailed Status (always derived from the trail) picks it up.
@@ -2099,6 +2186,7 @@
   });
 
   function openDrawer(id, forceReadOnly){
+    if(id && isRestrictedRole()) forceReadOnly = 'role';
     editingId = id || null;
     clearForm();
     if(id){
@@ -2140,6 +2228,7 @@
   $('entryForm').addEventListener('submit', async (ev)=>{
     ev.preventDefault();
     if(!canEdit()){ toast('You do not have permission to save entries.'); return; }
+    if(editingId && !canModifyExistingEntry()){ toast('Your role cannot edit or save existing entries.'); return; }
     const data = {
       id: editingId || uid(),
       workOrderNo: $('f-workOrderNo').value.trim(),
@@ -2186,11 +2275,18 @@
       data.acknowledged = entries[idx].acknowledged || false;
       data.acknowledgedBy = entries[idx].acknowledgedBy || '';
       data.acknowledgedAt = entries[idx].acknowledgedAt || '';
+      data.completedAt = entries[idx].completedAt || '';
+      data.completedBy = entries[idx].completedBy || '';
+      data.unitReceived = !!entries[idx].unitReceived;
+      data.receivedAt = entries[idx].receivedAt || '';
+      data.receivedBy = entries[idx].receivedBy || '';
+      syncCompletionStamp(data);
       entries[idx] = data;
     } else {
       data.acknowledged = false;
       data.acknowledgedBy = '';
       data.acknowledgedAt = '';
+      syncCompletionStamp(data);
       entries.push(data);
     }
     await setJSON('fleet_entries', entries);
@@ -2204,7 +2300,7 @@
   });
 
   $('deleteEntryBtn').addEventListener('click', async ()=>{
-    if(!canEdit()){ toast('You do not have permission to delete entries.'); return; }
+    if(!canEdit() || !canModifyExistingEntry()){ toast('You do not have permission to delete entries.'); return; }
     if(!editingId) return;
     if(!confirm('Delete this ledger entry? This cannot be undone.')) return;
     entries = entries.filter(x=>x.id!==editingId);
@@ -2477,6 +2573,8 @@
     if(name==='dashboard') renderWorkDashboard();
     if(name==='rmdashboard') renderRMDashboard();
     if(name==='reports') renderReports();
+    if(name==='receive') renderReceiveList();
+    if(name==='downloads') renderDownloads();
   }
   document.querySelectorAll('.module-nav-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>switchModule(btn.dataset.module));
@@ -2574,6 +2672,7 @@
 
   // ---------- Complete module ----------
   function renderCompleteList(){
+    renderReceiveList();
     const completedEntries = entries.filter(e=>e.status==='Completed');
     const badge = $('completeNavBadge');
     badge.textContent = completedEntries.length;
@@ -2618,11 +2717,80 @@
     });
   }
 
+  // ---------- Units For Receive ----------
+  const escHtml = v => String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  function runningSince(e){
+    const start = e.completedAt ? new Date(e.completedAt)
+                : (e.completedDate ? new Date(e.completedDate+'T00:00:00') : null);
+    if(!start || isNaN(start)) return null;
+    const mins = Math.max(0, Math.floor((Date.now() - start.getTime())/60000));
+    return { days: Math.floor(mins/1440), hours: Math.floor((mins%1440)/60), minutes: mins%60, total: mins };
+  }
+  function renderReceiveList(){
+    const wrap = $('receiveListWrap');
+    if(!wrap) return;
+    const pending = entries.filter(e=>e.status==='Completed' && !e.unitReceived)
+      .sort((a,b)=> ((runningSince(b)||{total:-1}).total) - ((runningSince(a)||{total:-1}).total));
+    const badge = $('receiveNavBadge');
+    if(badge){
+      badge.textContent = pending.length;
+      badge.closest('.module-nav-btn').classList.toggle('has-pending', pending.length>0);
+    }
+    if(pending.length===0){
+      wrap.innerHTML = '<div class="empty-ack">No units waiting to be received.</div>';
+      return;
+    }
+    const allowed = canMarkReceived();
+    const tip = allowed ? '' : 'Your role cannot mark units as received.';
+    wrap.innerHTML = `
+      <div class="table-scroll">
+        <table style="min-width:0;">
+          <thead><tr>
+            <th>Work Order</th><th>Plate #</th><th>Requestor</th><th>Completed By</th>
+            <th>Running (Days / Hours / Minutes)</th><th></th>
+          </tr></thead>
+          <tbody>
+            ${pending.map(e=>{
+              const r = runningSince(e);
+              const run = r ? `${r.days}d ${r.hours}h ${r.minutes}m` : '—';
+              return `<tr>
+                <td class="mono">${escHtml(e.workOrderNo||'No WO#')}</td>
+                <td class="mono">${escHtml(e.plateNo||'—')}</td>
+                <td>${escHtml(e.requestor||'—')}</td>
+                <td>${escHtml(e.completedBy||'—')}</td>
+                <td class="mono">${run}</td>
+                <td style="text-align:right;"><button type="button" class="btn btn-primary btn-sm" data-unit-received="${escHtml(e.id)}" ${allowed?'':'disabled'} title="${tip}">Unit Received</button></td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>`;
+    wrap.querySelectorAll('[data-unit-received]').forEach(btn=>{
+      btn.addEventListener('click', ()=>markUnitReceived(btn.dataset.unitReceived));
+    });
+  }
+  async function markUnitReceived(id){
+    if(!canMarkReceived()){ toast('Your role cannot mark units as received.'); return; }
+    const e = entries.find(x=>x.id===id);
+    if(!e) return;
+    if(!confirm(`Confirm unit received for ${e.workOrderNo||e.plateNo||'this work order'}?`)) return;
+    const u = getCurrentUser();
+    e.unitReceived = true;
+    e.receivedAt = new Date().toISOString();
+    e.receivedBy = u ? u.name : '';
+    await setJSON('fleet_entries', entries);
+    renderReceiveList();
+    toast(`${e.workOrderNo||e.plateNo||'Unit'} marked as received.`);
+  }
+  // Keep the running Days/Hours/Minutes fresh while the module is open.
+  setInterval(()=>{ const m = $('module-receive'); if(m && m.classList.contains('active')) renderReceiveList(); }, 30000);
+
   async function reopenEntry(id){
     const e = entries.find(x=>x.id===id);
     if(!e) return;
     if(!confirm(`Reopen ${e.workOrderNo||e.designation||'this work order'} and set status back to Ongoing?`)) return;
     e.status = 'Ongoing';
+    syncCompletionStamp(e);
     await setJSON('fleet_entries', entries);
     renderTable();
     renderCompleteList();
@@ -2653,7 +2821,7 @@
     // Bucket classification (Ongoing/Completed/Impounded/Total Loss) follows
     // DETAILED_STATUS_BUCKET — see dashboardBucket() — with a fallback to the
     // coarse Status/Category-1 fields for entries predating that mapping.
-    // DL Running % = (Plate List Total Trucks − (Ongoing + Impounded + Total Loss)) / Plate List Total Trucks.
+    // DL Running % = (Total Trucks − (Ongoing + Impounded)) / Total Trucks.
     const totalTrucks = plateNumbers.length;
     const notRunningPlates = new Set(
       entries.filter(hasOpenWO).map(e=>normalizePlate(e.plateNo))
@@ -2848,7 +3016,7 @@
     const sortKeys = (a,b)=> a===UNSET?1 : b===UNSET?-1 : a.localeCompare(b);
     const cardColors = ['var(--teal)','var(--blue)','var(--amber)','var(--violet)','var(--red)'];
 
-    // ---- Total DL Running % = (Plate List Total Trucks − (Ongoing + Impounded + Total Loss)) / Plate List Total Trucks ----
+    // ---- Total DL Running % = (Total Trucks − (Ongoing + Impounded)) / Total Trucks ----
     const totalTrucks = plateNumbers.length;
     const openEntries = entries.filter(hasOpenWO);
     const notRunningPlates = new Set(openEntries.map(e=>normalizePlate(e.plateNo)));
@@ -3615,6 +3783,248 @@
     }catch(e){
       alert('Could not import backup: ' + e.message);
     }
+  });
+
+  // ---------- Downloads ----------
+  const dlTodayStr = () => new Date().toISOString().slice(0,10);
+  const dlFmtDT = iso => {
+    if(!iso) return '';
+    const d = new Date(iso); if(isNaN(d)) return '';
+    const z = n => String(n).padStart(2,'0');
+    return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())+' '+z(d.getHours())+':'+z(d.getMinutes());
+  };
+  const yesNo = v => v ? 'Yes' : 'No';
+  const C = (label, fn) => ({ label, get: fn });
+
+  function woColumns(){
+    return [
+      C('Work Order No', e=>e.workOrderNo), C('Plate #', e=>e.plateNo), C('Requestor', e=>e.requestor),
+      C('Driver', e=>e.driverName), C('Odometer', e=>e.odometer), C('Age Class', e=>e.ageClass),
+      C('Designation', e=>e.designation), C('Agency', e=>e.agency), C('Assigned Parking Actual', e=>e.parkingActual),
+      C('Make', e=>e.make), C('Year Model', e=>e.yearModel), C('Truck Type', e=>e.truckType),
+      C('Breakdown Date', e=>e.breakdownDate), C('Completed Date', e=>e.completedDate),
+      C('Ageing (Days)', e=>{ const i = computeAgeing(e); return i.days===null ? '' : i.days; }),
+      C('Age Mapping', e=>{ const i = computeAgeing(e); return i.bucket ? i.bucket.label : ''; }),
+      C('Category-1', e=>e.category1), C('Category-2', e=>e.category2), C('Category-3', e=>e.category3),
+      C('Assigned Mechanics', e=>e.mechanics),
+      C('Status Trail 1', e=>e.trail1), C('Status Trail 2', e=>e.trail2), C('Status Trail 3', e=>e.trail3),
+      C('Latest Detailed Status', e=>e.latestStatus), C('Status', e=>e.status),
+      C('Mobile', e=>e.mobile), C('Location', e=>e.location), C('Reason', e=>e.reason),
+      C('Acknowledged', e=>yesNo(e.acknowledged)), C('Acknowledged By', e=>e.acknowledgedBy), C('Acknowledged At', e=>dlFmtDT(e.acknowledgedAt)),
+      C('Completed At', e=>dlFmtDT(e.completedAt)), C('Completed By', e=>e.completedBy),
+      C('Unit Received', e=>yesNo(e.unitReceived)), C('Received At', e=>dlFmtDT(e.receivedAt)), C('Received By', e=>e.receivedBy)
+    ];
+  }
+  function receiveColumns(extra){
+    const cols = [
+      C('Work Order', e=>e.workOrderNo), C('Plate #', e=>e.plateNo), C('Requestor', e=>e.requestor),
+      C('Completed By', e=>e.completedBy), C('Completed At', e=>dlFmtDT(e.completedAt) || e.completedDate || ''),
+      C('Running Days', e=>{ const r = runningSince(e); return r ? r.days : ''; }),
+      C('Running Hours', e=>{ const r = runningSince(e); return r ? r.hours : ''; }),
+      C('Running Minutes', e=>{ const r = runningSince(e); return r ? r.minutes : ''; })
+    ];
+    if(extra) cols.push(C('Received At', e=>dlFmtDT(e.receivedAt)), C('Received By', e=>e.receivedBy));
+    return cols;
+  }
+  function dlNotRunningPlates(){ return new Set(entries.filter(hasOpenWO).map(e=>normalizePlate(e.plateNo))); }
+
+  function dlDatasets(){
+    return [
+      { key:'workorders', module:'monitor', label:'Work Orders — Repair Monitoring', desc:'Every work order in the ledger (also covers Create Work Order entries).',
+        dateLabel:'Breakdown Date', dateOf:e=>e.breakdownDate||'', columns:woColumns(), rows:()=>entries },
+      { key:'toack', module:'acknowledge', label:'Work Order To Acknowledge', desc:'Work orders still waiting for acknowledgement.',
+        dateLabel:'Breakdown Date', dateOf:e=>e.breakdownDate||'', columns:woColumns(), rows:()=>entries.filter(e=>!e.acknowledged) },
+      { key:'complete', module:'complete', label:'Complete', desc:'All completed work orders.',
+        dateLabel:'Completed Date', dateOf:e=>e.completedDate||'', columns:woColumns(), rows:()=>entries.filter(e=>e.status==='Completed') },
+      { key:'receive', module:'receive', label:'Units For Receive', desc:'Completed units still waiting to be received (with running days / hours / minutes).',
+        dateLabel:'Completed Date', dateOf:e=>(e.completedAt||e.completedDate||'').slice(0,10), columns:receiveColumns(false),
+        rows:()=>entries.filter(e=>e.status==='Completed' && !e.unitReceived) },
+      { key:'received', module:'receive', label:'Units Received (history)', desc:'Units already marked as received.',
+        dateLabel:'Received Date', dateOf:e=>(e.receivedAt||'').slice(0,10), columns:receiveColumns(true),
+        rows:()=>entries.filter(e=>e.status==='Completed' && e.unitReceived) },
+      { key:'wfm', module:'dashboard', label:'WFM Dashboard — Ongoing', desc:'Acknowledged work orders currently Ongoing.',
+        dateLabel:'Breakdown Date', dateOf:e=>e.breakdownDate||'',
+        columns:[ C('Work Order', e=>e.workOrderNo), C('Plate #', e=>e.plateNo), C('Designation', e=>e.designation), C('Truck Type', e=>e.truckType),
+                  C('Latest Detailed Status', e=>e.latestStatus), C('Breakdown Date', e=>e.breakdownDate),
+                  C('Ageing (Days)', e=>{ const i = computeAgeing(e); return i.days===null ? '' : i.days; }),
+                  C('Assigned Parking Actual', e=>e.parkingActual), C('Assigned Mechanics', e=>e.mechanics) ],
+        rows:()=>entries.filter(e=>e.acknowledged && dashboardBucket(e)==='Ongoing') },
+      { key:'rmdash', module:'rmdashboard', label:'R&M Dashboard — DL Running % per Parking', desc:'Total Trucks, Running and DL Running % per Assigned Parking.',
+        columns:[ C('Assigned Parking', r=>r.parking), C('Total Trucks', r=>r.total), C('Running', r=>r.running), C('Not Running (Ongoing + Impounded)', r=>r.total-r.running), C('DL Running %', r=>r.pct) ],
+        rows:()=>{
+          const nr = dlNotRunningPlates();
+          const groups = {};
+          plateNumbers.forEach(p=>{ const k = p.parkingActual || '(Unspecified)'; (groups[k] = groups[k] || []).push(p); });
+          const mk = (parking, list)=>{ const running = list.filter(p=>!nr.has(p.plate)).length; return { parking, total:list.length, running, pct: list.length ? Math.round(running/list.length*100)+'%' : '0%' }; };
+          const rows = Object.keys(groups).sort().map(k=>mk(k, groups[k]));
+          rows.push(mk('ALL PARKINGS', plateNumbers));
+          return rows;
+        } },
+      { key:'plates', module:'plates', label:'Plate Number List', desc:'All trucks enrolled in the plate registry.',
+        columns:[ C('Plate #', p=>p.plate), C('Age Class', p=>p.ageClass), C('Vehicle Model 1', p=>p.vehicleModel1), C('Vehicle Model 2', p=>p.vehicleModel2),
+                  C('Chassis No', p=>p.chassisNo), C('Engine No', p=>p.engineNo), C('Gross Weight', p=>p.grossWeight),
+                  C('Registered Owner', p=>p.registeredOwner), C('Provisional Authority', p=>p.provisionalAuthority),
+                  C('Designation', p=>p.designation), C('Assigned Parking Actual', p=>p.parkingActual), C('Make', p=>p.make),
+                  C('Year Model', p=>p.yearModel), C('Truck Type', p=>p.truckType) ],
+        rows:()=>plateNumbers },
+      { key:'roster', module:'roster', label:'Roster', desc:'Dropdown options (mechanics, make, parking, status, etc.).',
+        columns:[ C('Field', r=>r.field), C('Option', r=>r.option), C('Type', r=>r.type) ],
+        rows:()=>{
+          const out = [];
+          FIELD_CONFIGS.forEach(cfg=>{
+            DEFAULT_OPTIONS[cfg.key].forEach(v=>out.push({ field:cfg.label, option:v, type:'Built-in' }));
+            customOptions[cfg.key].forEach(v=>out.push({ field:cfg.label, option:v, type:'Added' }));
+          });
+          return out;
+        } },
+      { key:'users', module:'users', label:'Users & Access', desc:'Names, emails and roles (passwords are never exported).',
+        columns:[ C('Name', u=>u.name), C('Email', u=>u.email), C('Role', u=>roleLabel(u.role)) ],
+        rows:()=>users }
+    ];
+  }
+  function dlAllowed(ds){
+    if(ds.key==='users') return isAdmin();
+    const u = getCurrentUser();
+    if(u && NAV_RESTRICTED_ROLES.includes(u.role)) return RESTRICTED_ALLOWED_MODULES.includes(ds.module);
+    if(u && u.role==='rm-fte' && ds.module==='dashboard') return false;
+    return true;
+  }
+  const dlVisible = () => dlDatasets().filter(dlAllowed);
+
+  function csvCell(v){
+    let t = v==null ? '' : String(v);
+    if(/^[=+@]/.test(t) || /^-[^\d.]/.test(t)) t = "'" + t;
+    return /[",\n\r]/.test(t) ? '"' + t.replace(/"/g,'""') + '"' : t;
+  }
+  function buildCsv(ds, cols, rows){
+    const lines = [cols.map(c=>csvCell(c.label)).join(',')];
+    rows.forEach(r=>lines.push(cols.map(c=>csvCell(c.get(r))).join(',')));
+    return '\uFEFF' + lines.join('\r\n');
+  }
+  function saveBlob(blob, name){
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 1500);
+  }
+  const csvName = ds => `rm-tracker-${ds.key}-${dlTodayStr()}.csv`;
+
+  // Minimal ZIP writer (stored, no compression) so "All" / "Selected" arrive as one file.
+  const CRC_TABLE = (()=>{ const t = new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c = (c&1) ? (0xEDB88320 ^ (c>>>1)) : (c>>>1); t[n]=c>>>0; } return t; })();
+  function crc32(bytes){ let c = 0xFFFFFFFF; for(let i=0;i<bytes.length;i++) c = CRC_TABLE[(c^bytes[i])&0xFF] ^ (c>>>8); return (c ^ 0xFFFFFFFF)>>>0; }
+  function makeZip(files){
+    const enc = new TextEncoder(), parts = [], central = [];
+    const d = new Date();
+    const time = (d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1);
+    const date = ((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate();
+    let offset = 0, centralSize = 0;
+    files.forEach(f=>{
+      const name = enc.encode(f.name), data = f.data, crc = crc32(data), size = data.length;
+      const lh = new DataView(new ArrayBuffer(30));
+      lh.setUint32(0,0x04034b50,true); lh.setUint16(4,20,true); lh.setUint16(6,0x0800,true); lh.setUint16(8,0,true);
+      lh.setUint16(10,time,true); lh.setUint16(12,date,true); lh.setUint32(14,crc,true);
+      lh.setUint32(18,size,true); lh.setUint32(22,size,true); lh.setUint16(26,name.length,true); lh.setUint16(28,0,true);
+      parts.push(new Uint8Array(lh.buffer), name, data);
+      const ch = new DataView(new ArrayBuffer(46));
+      ch.setUint32(0,0x02014b50,true); ch.setUint16(4,20,true); ch.setUint16(6,20,true); ch.setUint16(8,0x0800,true); ch.setUint16(10,0,true);
+      ch.setUint16(12,time,true); ch.setUint16(14,date,true); ch.setUint32(16,crc,true);
+      ch.setUint32(20,size,true); ch.setUint32(24,size,true); ch.setUint16(28,name.length,true);
+      ch.setUint16(30,0,true); ch.setUint16(32,0,true); ch.setUint16(34,0,true); ch.setUint16(36,0,true); ch.setUint32(38,0,true); ch.setUint32(42,offset,true);
+      central.push(new Uint8Array(ch.buffer), name);
+      offset += 30 + name.length + size; centralSize += 46 + name.length;
+    });
+    const end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0,0x06054b50,true); end.setUint16(4,0,true); end.setUint16(6,0,true);
+    end.setUint16(8,files.length,true); end.setUint16(10,files.length,true);
+    end.setUint32(12,centralSize,true); end.setUint32(16,offset,true); end.setUint16(20,0,true);
+    return new Blob([...parts, ...central, new Uint8Array(end.buffer)], {type:'application/zip'});
+  }
+  function downloadZip(list, zipLabel){
+    if(!list.length){ toast('Nothing selected to download.'); return; }
+    const enc = new TextEncoder();
+    const files = list.map(ds=>({ name: csvName(ds), data: enc.encode(buildCsv(ds, ds.columns, ds.rows())) }));
+    saveBlob(makeZip(files), `rm-tracker-${zipLabel}-${dlTodayStr()}.zip`);
+    $('dlStatus').textContent = `Downloaded ${files.length} file${files.length===1?'':'s'}.`;
+  }
+
+  function renderDownloads(){
+    const grid = $('dlGrid');
+    if(!grid) return;
+    const prevChecked = new Set(Array.from(grid.querySelectorAll('input[data-dl-check]:checked')).map(i=>i.dataset.dlCheck));
+    const list = dlVisible();
+    grid.innerHTML = list.map(ds=>{
+      const n = ds.rows().length;
+      return `<div class="dl-card">
+        <div class="dl-top"><input type="checkbox" data-dl-check="${ds.key}" ${prevChecked.has(ds.key)?'checked':''} title="Include in 'Download Selected'">
+          <h3>${escHtml(ds.label)}</h3></div>
+        <div class="dl-meta">${escHtml(ds.desc)}<br>${n} row${n===1?'':'s'} &middot; ${ds.columns.length} columns</div>
+        <button type="button" class="btn btn-sm" data-dl-one="${ds.key}">Download CSV</button>
+      </div>`;
+    }).join('');
+    grid.querySelectorAll('[data-dl-one]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const ds = dlVisible().find(d=>d.key===btn.dataset.dlOne); if(!ds) return;
+        saveBlob(new Blob([buildCsv(ds, ds.columns, ds.rows())], {type:'text/csv;charset=utf-8'}), csvName(ds));
+        $('dlStatus').textContent = `Downloaded ${csvName(ds)}.`;
+      });
+    });
+    // custom export dataset picker (keep current choice if still allowed)
+    const sel = $('dlCustomDataset'), prev = sel.value;
+    sel.innerHTML = list.map(ds=>`<option value="${ds.key}">${escHtml(ds.label)}</option>`).join('');
+    if(list.some(d=>d.key===prev)) sel.value = prev;
+    renderCustomCols(list.some(d=>d.key===prev));
+  }
+  function currentCustomDs(){ return dlVisible().find(d=>d.key===$('dlCustomDataset').value) || null; }
+  function renderCustomCols(keepChecks){
+    const ds = currentCustomDs(), box = $('dlCustomCols');
+    if(!ds){ box.innerHTML = '<span class="roster-empty">No data available for your role.</span>'; $('dlCustomInfo').textContent=''; return; }
+    const prev = keepChecks ? new Set(Array.from(box.querySelectorAll('input:checked')).map(i=>i.value)) : null;
+    box.innerHTML = ds.columns.map((c,i)=>`<label><input type="checkbox" value="${i}" ${(!prev || prev.has(String(i)))?'checked':''}> ${escHtml(c.label)}</label>`).join('');
+    const hasDate = !!ds.dateOf;
+    ['dlDateFrom','dlDateTo'].forEach(id=>{ $(id).disabled = !hasDate; if(!hasDate) $(id).value=''; });
+    $('dlDateFromLbl').textContent = hasDate ? ds.dateLabel+' from' : 'Date from (n/a)';
+    $('dlDateToLbl').textContent = hasDate ? ds.dateLabel+' to' : 'Date to (n/a)';
+    updateCustomInfo();
+  }
+  function customSelection(){
+    const ds = currentCustomDs(); if(!ds) return null;
+    const idx = Array.from($('dlCustomCols').querySelectorAll('input:checked')).map(i=>parseInt(i.value,10));
+    const cols = idx.map(i=>ds.columns[i]);
+    const from = $('dlDateFrom').value, to = $('dlDateTo').value;
+    const q = $('dlSearch').value.trim().toLowerCase();
+    let rows = ds.rows();
+    if(ds.dateOf && (from || to)){
+      rows = rows.filter(r=>{ const d = ds.dateOf(r); if(!d) return false; return (!from || d>=from) && (!to || d<=to); });
+    }
+    if(q){
+      rows = rows.filter(r=> ds.columns.map(c=>c.get(r)).join(' ').toLowerCase().includes(q));
+    }
+    return { ds, cols, rows };
+  }
+  function updateCustomInfo(){
+    const sel = customSelection();
+    $('dlCustomInfo').textContent = sel ? `${sel.rows.length} row${sel.rows.length===1?'':'s'} × ${sel.cols.length} column${sel.cols.length===1?'':'s'} will be exported.` : '';
+  }
+  if($('dlAllBtn')) $('dlAllBtn').addEventListener('click', ()=> downloadZip(dlVisible(), 'all'));
+  if($('dlSelectedBtn')) $('dlSelectedBtn').addEventListener('click', ()=>{
+    const keys = new Set(Array.from($('dlGrid').querySelectorAll('input[data-dl-check]:checked')).map(i=>i.dataset.dlCheck));
+    downloadZip(dlVisible().filter(d=>keys.has(d.key)), 'selected');
+  });
+  if($('dlSelAllBtn')) $('dlSelAllBtn').addEventListener('click', ()=> $('dlGrid').querySelectorAll('input[data-dl-check]').forEach(i=>i.checked=true));
+  if($('dlSelNoneBtn')) $('dlSelNoneBtn').addEventListener('click', ()=> $('dlGrid').querySelectorAll('input[data-dl-check]').forEach(i=>i.checked=false));
+  if($('dlCustomDataset')) $('dlCustomDataset').addEventListener('change', ()=> renderCustomCols(false));
+  if($('dlCustomCols')) $('dlCustomCols').addEventListener('change', updateCustomInfo);
+  ['dlDateFrom','dlDateTo'].forEach(id=>{ if($(id)) $(id).addEventListener('input', updateCustomInfo); });
+  if($('dlSearch')) $('dlSearch').addEventListener('input', updateCustomInfo);
+  if($('dlColsAll')) $('dlColsAll').addEventListener('click', ()=>{ $('dlCustomCols').querySelectorAll('input').forEach(i=>i.checked=true); updateCustomInfo(); });
+  if($('dlColsNone')) $('dlColsNone').addEventListener('click', ()=>{ $('dlCustomCols').querySelectorAll('input').forEach(i=>i.checked=false); updateCustomInfo(); });
+  if($('dlCustomBtn')) $('dlCustomBtn').addEventListener('click', ()=>{
+    const sel = customSelection();
+    if(!sel){ toast('Nothing available to download.'); return; }
+    if(!sel.cols.length){ toast('Select at least one column.'); return; }
+    if(!sel.rows.length){ toast('No rows match your filters.'); return; }
+    saveBlob(new Blob([buildCsv(sel.ds, sel.cols, sel.rows)], {type:'text/csv;charset=utf-8'}), `rm-tracker-${sel.ds.key}-custom-${dlTodayStr()}.csv`);
+    $('dlCustomInfo').textContent = `Downloaded ${sel.rows.length} row${sel.rows.length===1?'':'s'}.`;
   });
 
   // ---------- Init ----------
