@@ -1345,6 +1345,39 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- ============ Firebase (Firestore) cloud storage ============ -->
+<script>
+  // The app waits on this promise before reading data, so the module below has time to load.
+  window.fbReady = new Promise(function(res){ window.__fbResolve = res; });
+</script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// >>> Paste your own values from Firebase Console → Project settings → Your apps → Web app <<<
+const FIREBASE_CONFIG = { apiKey:"…", authDomain:"…", projectId:"…", appId:"…" };
+
+try{
+  const configured = FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.projectId &&
+                     !String(FIREBASE_CONFIG.apiKey).includes('…') && !String(FIREBASE_CONFIG.projectId).includes('…');
+  if(!configured){
+    console.info('[Firebase] Not configured yet — using browser storage only. Fill in FIREBASE_CONFIG to enable cloud sync.');
+    window.__fbResolve(false);
+  } else {
+    const app = initializeApp(FIREBASE_CONFIG);
+    const db  = getFirestore(app);
+    window.fbStore = {
+      async get(key){ const s = await getDoc(doc(db,'fleet',key)); return s.exists() ? s.data().value : null; },
+      async set(key,val){ await setDoc(doc(db,'fleet',key), { value:val, updatedAt:Date.now() }); }
+    };
+    window.__fbResolve(true);
+  }
+}catch(err){
+  console.error('[Firebase] init failed — falling back to browser storage.', err);
+  window.__fbResolve(false);
+}
+</script>
+
 <script>
 (function(){
   const $ = id => document.getElementById(id);
@@ -1440,9 +1473,34 @@
     lockApp();
   });
 
+  // ---------- Firebase bridge ----------
+  // Resolves true when Firestore is configured and ready; never blocks the app for more than a few seconds.
+  let fbWarned = false;
+  function fbOn(){
+    if(!window.fbReady) return Promise.resolve(false);
+    return Promise.race([ window.fbReady, new Promise(r=>setTimeout(()=>r(false), 8000)) ])
+      .then(ok => !!ok && !!window.fbStore);
+  }
+  function fbWarn(msg, err){
+    console.error('[Firebase] '+msg, err);
+    if(!fbWarned){ fbWarned = true; try{ toast('Cloud sync problem — saved on this device only. Check your Firebase setup.'); }catch(e){} }
+  }
+
   async function getJSON(key, fallback){
     let raw = null;
-    if(storageOK()){
+    const useFb = await fbOn();
+    if(useFb){
+      try{
+        const v = await window.fbStore.get(key);
+        if(v != null){ raw = v; lsSet(key, v); }               // cloud copy wins; cache it locally
+        else {
+          // First run against an empty cloud: push any existing local data up so nothing is lost.
+          const local = lsGet(key);
+          if(local !== null){ raw = local; try{ await window.fbStore.set(key, local); }catch(e){ fbWarn('initial upload failed', e); } }
+        }
+      }catch(e){ fbWarn('read failed — using local copy', e); }
+    }
+    if(raw === null && storageOK()){
       try{ const r = await window.storage.get(key, true); if(r && r.value != null) raw = r.value; }
       catch(e){}
     }
@@ -1456,6 +1514,10 @@
     if(storageOK()){
       try{ await window.storage.set(key, str, true); ok = true; }
       catch(e){ console.error('storage set failed', e); }
+    }
+    if(await fbOn()){
+      try{ await window.fbStore.set(key, str); ok = true; }
+      catch(e){ fbWarn('write failed — saved locally only', e); }
     }
     return ok;
   }
@@ -2212,7 +2274,7 @@
     document.querySelectorAll('#entryForm input, #entryForm select, #entryForm textarea').forEach(el=>{ el.disabled = !editable; });
     $('saveEntryBtn').style.display = editable ? '' : 'none';
     if(!editable){ $('deleteEntryBtn').style.display = 'none'; }
-    if(!editable){ $('drawerSub').textContent += forceReadOnly==='role' ? ' (View only — your role cannot edit this entry.)' : forceReadOnly ? ' (Read-only — acknowledge first to unlock editing.)' : ' (Read-only — you are viewing, not editing.)'; }
+    if(!editable){ $('drawerSub').textContent += forceReadOnly==='role' ? ' (View only — your role cannot edit this entry.)' : forceReadOnly==='dash' ? ' (View only — edit this entry from Repair Monitoring.)' : forceReadOnly ? ' (Read-only — acknowledge first to unlock editing.)' : ' (Read-only — you are viewing, not editing.)'; }
     $('overlay').classList.add('show');
   }
   function closeDrawer(){ $('overlay').classList.remove('show'); editingId=null; }
@@ -2874,11 +2936,15 @@
 
     renderColumn('dashAckColumn', toAck, 'Nothing pending acknowledgement.', e=>
       `<button type="button" class="btn btn-ghost btn-sm" data-wd-view-ro="${e.id}">View</button>`, true);
+    // Ongoing items on the WFM Dashboard are view-only for everyone (no Save / Delete) — edit them from Repair Monitoring.
     renderColumn('dashOngoingColumn', ongoing, 'Nothing ongoing right now.', e=>
-      `<button type="button" class="btn btn-ghost btn-sm" ${canManageDash ? 'data-wd-view-btn' : 'data-wd-view-role'}="${e.id}">View</button>`, canManageDash ? false : 'role');
+      `<button type="button" class="btn btn-ghost btn-sm" data-wd-view-dash="${e.id}">View</button>`, 'dash');
 
     document.querySelectorAll('[data-wd-view-btn]').forEach(btn=>{
       btn.addEventListener('click', (ev)=>{ ev.stopPropagation(); openDrawer(btn.dataset.wdViewBtn); });
+    });
+    document.querySelectorAll('[data-wd-view-dash]').forEach(btn=>{
+      btn.addEventListener('click', (ev)=>{ ev.stopPropagation(); openDrawer(btn.dataset.wdViewDash, 'dash'); });
     });
     document.querySelectorAll('[data-wd-view-role]').forEach(btn=>{
       btn.addEventListener('click', (ev)=>{ ev.stopPropagation(); openDrawer(btn.dataset.wdViewRole, 'role'); });
